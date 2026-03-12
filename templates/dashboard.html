@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Asset Delivery</title>
+<link rel="stylesheet" href="/static/css/shared.css">
+<link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body data-page="admin">
+
+<nav class="nav no-print">
+  <div class="nav-brand">
+    <strong>IT Asset Delivery</strong>
+    <span>ระบบจัดการแบบฟอร์มส่งมอบครุภัณฑ์</span>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="Page.show('dashboard')">📊 Dashboard</button>
+    <button class="nav-tab"        onclick="Page.show('create')">➕ สร้างฟอร์ม</button>
+    <button class="nav-tab"        onclick="Page.show('history')">📋 ประวัติ</button>
+    <button class="nav-tab"        onclick="window.location.href='admin.html'">⚙️ Template</button>
+  </div>
+  <span class="role-chip" id="adminRoleChip">👤 ADMIN</span>
+
+   
+  <button class="btn btn-outline btn-sm" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);color:#fff;margin-left:12px" onclick="Auth.logout()">🚪 ออกจากระบบ</button>
+</nav>
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page active">
+  <div class="page-header">
+    <div class="page-title">Dashboard <small>ภาพรวมระบบส่งมอบครุภัณฑ์ IT</small></div>
+    <button class="btn btn-primary" onclick="Page.show('create')">➕ สร้างฟอร์มใหม่</button>
+  </div>
+  <div class="stats-grid" id="statsGrid"></div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">ฟอร์มล่าสุด</span>
+      <button class="btn btn-outline btn-sm" onclick="Page.show('history')">ดูทั้งหมด →</button>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>รหัสฟอร์ม</th><th>พนักงาน</th><th>รหัสพนักงาน</th>
+        <th>แผนก</th><th>ครุภัณฑ์</th><th>สถานะ</th><th>วันที่</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="dashTable"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- CREATE FORM -->
+<div id="page-create" class="page">
+  <div class="page-header">
+    <div class="page-title">สร้างฟอร์มใหม่ <small>กรอกข้อมูลพนักงานและตรวจสอบครุภัณฑ์ก่อนส่งมอบ</small></div>
+  </div>
+
+  <div id="editModeBox" class="alert alert-warning" style="display:none;margin-bottom:14px">
+    โหมดแก้ไขฟอร์ม: <span id="editModeFormId" class="mono">—</span>
+    <span style="margin-left:8px;color:var(--text2)">บันทึกแล้วระบบจะส่งกลับให้ User กรอกใหม่</span>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-header"><span class="card-title">👤 ข้อมูลพนักงานผู้รับ</span></div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="form-group"><label>ชื่อ-นามสกุล <span class="req">*</span></label><input type="text" id="c-name" list="employeeNameList" placeholder="พิมพ์ชื่อหรือเลือกจากรายการ"></div>
+        <div class="form-group"><label>รหัสพนักงาน <span class="req">*</span></label><input type="text" id="c-code" list="employeeCodeList" placeholder="เช่น 1001"></div>
+        <div class="form-group"><label>แผนก</label><input type="text" id="c-dept" placeholder="เช่น ฝ่ายบัญชี"></div>
+        <div class="form-group"><label>Email (สำหรับส่ง Link)</label><input type="email" id="c-email" placeholder="somchai@company.com"></div>
+      </div>
+      <datalist id="employeeCodeList"></datalist>
+      <datalist id="employeeNameList"></datalist>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-header"><span class="card-title">💻 ข้อมูลครุภัณฑ์</span></div>
+    <div class="card-body">
+      <div class="form-grid-3">
+        <div class="form-group"><label>รหัสครุภัณฑ์ <span class="req">*</span></label><input type="text" id="c-asset" placeholder="IT-PC-0001"></div>
+        <div class="form-group"><label>ยี่ห้อ / รุ่น</label><input type="text" id="c-model" placeholder="Dell OptiPlex 5090"></div>
+        <div class="form-group"><label>Serial Number</label><input type="text" id="c-serial" placeholder="SN123456"></div>
+        <div class="form-group span3"><label>Spec โดยย่อ</label><input type="text" id="c-spec" placeholder="Intel i5-11500, RAM 16GB, SSD 512GB"></div>
+        <div class="form-group"><label>วันที่ส่งมอบ</label><input type="date" id="c-date"></div>
+        <div class="form-group"><label>สถานที่ส่งมอบ</label><input type="text" id="c-loc" placeholder="อาคาร A ชั้น 3"></div>
+        <div class="form-group"><label>ประเภท</label>
+          <select id="c-type">
+            <option value="new">เครื่องใหม่</option>
+            <option value="replace">เปลี่ยนทดแทน</option>
+            <option value="transfer">โอนย้าย</option>
+            <option value="repair">ซ่อมแล้วคืน</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-header">
+      <span class="card-title">📋 Template Checklist</span>
+      <a href="admin.html" class="btn btn-outline btn-sm">⚙️ จัดการ Template</a>
+    </div>
+    <div class="card-body" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px">
+      <select id="c-template" onchange="AdminCreate.onTemplateChange()" style="flex:1;min-width:200px">
+        <option value="">⬛ Default (มาตรฐานระบบ)</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="AdminCreate.loadTemplates()">🔄 โหลด Template</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-header">
+      <span class="card-title">✅ รายการตรวจสอบ</span>
+      <span style="font-size:11.5px;color:var(--danger);font-weight:700">⚠ Admin กรอกเท่านั้น</span>
+    </div>
+    <div class="card-body" id="adminChecklist"></div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-header"><span class="card-title">📝 หมายเหตุ Admin</span></div>
+    <div class="card-body">
+      <textarea id="c-note" placeholder="บันทึกเพิ่มเติม เช่น สภาพเครื่อง, การตั้งค่าพิเศษ..."></textarea>
+      <div class="form-group" id="c-edit-note-group" style="margin-top:12px;display:none">
+        <label for="c-edit-note">หมายเหตุการแก้ไข/การส่งกลับ</label>
+        <input type="text" id="c-edit-note" placeholder="เช่น แก้ Serial Number และส่งกลับให้ User ตรวจอีกครั้ง">
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-header">
+      <span class="card-title">✍️ ลายเซ็นเจ้าหน้าที่ IT</span>
+      <span style="font-size:11.5px;color:var(--danger);font-weight:700">⚠ Admin เท่านั้น</span>
+    </div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:10px">ข้าพเจ้าได้ตรวจสอบครุภัณฑ์ตามรายการข้างต้นเรียบร้อยแล้ว</p>
+      <!-- ช่องวาดลายเซ็นหลักของ Admin -->
+      <div class="sig-wrap">
+        <canvas id="sig-admin-create" class="sig-canvas"></canvas>
+        <div class="sig-toolbar"><span class="sig-label" id="sig-create-label">✏️ วาดลายเซ็น</span>
+          <button class="btn btn-ghost btn-sm" onclick="SigPad.clear('sig-admin-create');document.getElementById('sig-create-label').textContent='✏️ วาดลายเซ็น';document.getElementById('sig-create-file').value='';document.getElementById('sig-create-preview').style.display='none'">ล้าง</button></div>
+      </div>
+      <!-- fallback: แนบไฟล์ลายเซ็นแทนการวาด (รองรับกรณีมีรูปเซ็นอยู่แล้ว) -->
+      <div style="margin-top:8px;border-top:1px dashed var(--border);padding-top:8px">
+        <div style="font-size:11.5px;color:var(--text3);margin-bottom:4px">หรือแนบไฟล์ลายเซ็น</div>
+        <input type="file" id="sig-create-file" accept="image/*" style="font-size:11.5px;width:100%"
+          onchange="const f=this.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const p=document.getElementById('sig-create-preview');p.src=e.target.result;p.style.display='block';SigPad.clear('sig-admin-create');document.getElementById('sig-create-label').textContent='📎 ใช้ไฟล์แนบ';};r.readAsDataURL(f)">
+        <img id="sig-create-preview" src="" alt="preview" style="display:none;max-width:100%;max-height:60px;margin-top:4px;border-radius:4px;border:1px solid var(--border)">
+      </div>
+    </div>
+  </div>
+
+  <div class="action-row no-print">
+    <button class="btn btn-outline" onclick="Page.show('dashboard')">← กลับ Dashboard</button>
+    <button class="btn btn-outline" onclick="AdminCreate.cancel()">↩ ยกเลิก</button>
+    <button class="btn btn-primary" id="btnCreateSubmit" onclick="AdminCreate.submit()">💾 บันทึกและสร้าง Link →</button>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div id="page-history" class="page">
+  <div class="page-header">
+    <div class="page-title">ประวัติฟอร์มทั้งหมด <small>ค้นหา / กรอง / ดูประวัติย้อนหลัง</small></div>
+  </div>
+  <div class="search-bar">
+    <input type="text" id="hSearch" placeholder="🔍 ค้นหา ชื่อ / รหัสพนักงาน / รหัสครุภัณฑ์..." oninput="History.render()">
+    <select id="hStatus" onchange="History.render()">
+      <option value="">ทุกสถานะ</option>
+      <option value="sent">รอ User กรอก</option>
+      <option value="user_filled">รอ Admin ยืนยัน</option>
+      <option value="completed">เสร็จสิ้น</option>
+    </select>
+  </div>
+  <div class="card">
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>รหัสฟอร์ม</th><th>พนักงาน</th><th>รหัสพนักงาน</th>
+        <th>แผนก</th><th>ครุภัณฑ์</th><th>สถานะ</th>
+        <th>วันสร้าง</th><th>วันเสร็จ</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="histTable"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- MODAL: LINK -->
+<div class="modal-overlay" id="modalLink">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header"><span class="modal-title">✅ สร้างฟอร์มสำเร็จ!</span><button class="modal-close" onclick="closeModal('modalLink')">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-success" style="margin-bottom:12px">บันทึกข้อมูลเรียบร้อย สามารถส่ง Link ให้พนักงานได้</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:8px">🔗 Link สำหรับพนักงาน (User):</p>
+      <div class="link-box"><span id="modalLinkText" style="flex:1">—</span><button class="copy-btn" onclick="AdminCreate.copyLink()">📋 คัดลอก</button></div>
+      <p style="font-size:12px;color:var(--text3);margin-top:10px">พนักงานเปิด Link นี้เพื่อกรอกและเซ็นชื่อรับ</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modalLink');Page.show('dashboard')">Dashboard</button>
+      <button class="btn btn-primary" onclick="closeModal('modalLink');Page.show('history')">ดูประวัติ →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: VIEW -->
+<div class="modal-overlay" id="modalView">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header"><span class="modal-title" id="modalViewTitle">ดูฟอร์ม</span><button class="modal-close" onclick="closeModal('modalView')">✕</button></div>
+    <div class="modal-body" id="modalViewBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" id="btnPrintView">🖨️ พิมพ์ A4</button>
+      <button class="btn btn-outline" onclick="closeModal('modalView')">ปิด</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: REVIEW -->
+<div class="modal-overlay" id="modalReview">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header"><span class="modal-title">🔍 ตรวจสอบและยืนยันฟอร์ม</span><button class="modal-close" onclick="closeModal('modalReview')">✕</button></div>
+    <div class="modal-body" id="modalReviewBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modalReview')">ปิด</button>
+      <button class="btn btn-danger" id="btnReturnReview">↩ ส่งกลับให้ User แก้ไข</button>
+      <button class="btn btn-success" id="btnConfirmReview">✅ ยืนยันและปิดฟอร์ม</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts (โหลดตามลำดับ dependency) -->
+<script src="/static/js/auth.js"></script>
+<script src="/static/js/config.js"></script>
+<script src="/static/js/models.js?v=20260309-3"></script>
+<script src="/static/js/db.js"></script>
+<script src="/static/js/signature.js"></script>
+<script src="/static/js/employees.js?v=20260306-3"></script>
+<script src="/static/js/ui.js?v=20260309-4"></script>
+<script src="/static/js/admin.js?v=20260309-4"></script>
+</body>
+</html>

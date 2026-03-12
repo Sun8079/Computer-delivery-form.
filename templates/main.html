@@ -1,0 +1,95 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — IT Asset Delivery</title>
+    <link rel="stylesheet" href="/static/css/shared.css">
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <h1>IT Asset Delivery</h1>
+        <p>ระบบจัดการแบบฟอร์มส่งมอบครุภัณฑ์</p>
+      </div>
+
+      <!-- Error Message -->
+      <div id="errorMsg" class="error-msg"></div>
+
+      <!-- Admin Login Tab -->
+      <div id="adminTabPanel" class="tab-panel">
+        <form class="login-form" onsubmit="return Auth.loginAdmin(event)">
+          <div class="form-group">
+            <label for="adminUsername">รหัสผู้ใช้</label>
+            <input 
+              type="text" 
+              id="adminUsername" 
+              placeholder="admin"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="adminPassword">รหัสผ่าน</label>
+            <input 
+              type="password" 
+              id="adminPassword" 
+              placeholder="•••••••"
+              required
+            >
+          </div>
+
+          <button type="submit" class="login-btn">เข้าสู่ระบบ Admin</button>
+        </form>
+
+        <div class="info-box">
+          <strong>🔑 Admin Login</strong>
+          หากคุณเป็น Admin IT ให้ใช้รหัสผู้ใช้และรหัสผ่าน ด้วยระบบจัดการแบบฟอร์ม
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div class="divider">
+        <span class="divider-text">หรือ</span>
+      </div>
+
+      <!-- User Access via Token -->
+      <div id="userTabPanel" class="tab-panel">
+        <div class="user-link-section">
+          <p>User ใช้ Link ที่ Admin ส่งมา</p>
+          <div class="user-link-input">
+            <input 
+              type="text" 
+              id="userToken" 
+              placeholder="วางลิงค์หรือ Token ที่ได้รับ"
+              autocomplete="off"
+            >
+            <button type="button" onclick="Auth.loginUser()">เข้าสู่ระบบ</button>
+          </div>
+        </div>
+
+        <div class="info-box">
+          <strong>🔗 User Access</strong>
+          Admin จะส่ง Link พิเศษให้ User เพื่อเข้าตรวจรับครุภัณฑ์ คัดลอก Token จาก Link และวางที่นี่
+        </div>
+      </div>
+
+      <!-- Check Token in URL -->
+      <script>
+        // ถ้า URL มี token ให้อัตโนมัติเติมใน input
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        if (token) {
+          document.getElementById('userToken').value = token;
+        }
+      </script>
+    </div>
+  </div>
+
+  <script src="/static/js/auth.js"></script>
+</body>
+</html>
+
+

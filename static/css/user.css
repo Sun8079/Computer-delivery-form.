@@ -1,0 +1,263 @@
+/* ============================================================
+   user.css — Styles เฉพาะหน้า User (ตรวจรับครุภัณฑ์)
+   ============================================================ */
+
+/* ===== USER HEADER ===== */
+.user-header       { background: linear-gradient(135deg, #1a3c5e 0%, #2563a8 100%); color: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.2); }
+.user-header-inner { max-width: 720px; margin: 0 auto; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
+.user-brand strong { font-size: 15px; }
+.user-brand span   { font-size: 11px; opacity: .6; font-family: var(--mono); display: block; }
+.role-chip         { background: rgba(255,255,255,.15); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; font-family: var(--mono); }
+
+/* ===== WRAP ===== */
+.user-wrap { max-width: 720px; margin: 0 auto; padding: 26px 18px 52px; }
+
+/* ===== READ-ONLY FIELD ===== */
+.field-readonly {
+  background:    var(--surface2);
+  border:        1.5px solid var(--border);
+  border-radius: var(--r);
+  padding:       8px 11px;
+  font-size:     14px;
+  color:         var(--text2);
+  width:         100%;
+  font-family:   var(--sans);
+  line-height:   1.5;
+}
+
+/* ===== LOCK NOTICE ===== */
+.lock-notice {
+  display:       flex;
+  align-items:   center;
+  gap:           8px;
+  background:    #fffbeb;
+  border:        1px solid #fde68a;
+  border-radius: var(--r);
+  padding:       9px 13px;
+  font-size:     13px;
+  color:         #78350f;
+  margin-bottom: 14px;
+}
+
+/* ===== STEP STRIP ===== */
+.step-strip {
+  display:       flex;
+  align-items:   center;
+  background:    #fff;
+  border:        1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding:       12px 20px;
+  margin-bottom: 20px;
+  gap:           0;
+}
+
+.step-item { display: flex; align-items: center; gap: 10px; flex: 1; }
+.step-dot  {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  border: 2px solid var(--border); color: var(--text3); background: #fff;
+}
+.step-dot.done   { background: var(--success);    border-color: var(--success);    color: #fff; }
+.step-dot.active { background: var(--primary-lt); border-color: var(--primary-lt); color: #fff; box-shadow: 0 0 0 4px rgba(37,99,168,.15); }
+.step-name       { font-size: 12px; color: var(--text3); line-height: 1.3; }
+.step-name b     { display: block; font-size: 13px; color: var(--text); }
+.step-line       { flex: 0 0 28px; height: 2px; background: var(--border); margin: 0 4px; }
+.step-line.done  { background: var(--success); }
+
+/* ===== CHECKLIST USER ===== */
+.user-cl-item          { display: grid; grid-template-columns: 22px 1fr; gap: 12px; align-items: start; padding: 11px 0; border-bottom: 1px solid var(--border); }
+.user-cl-item:last-child { border-bottom: none; }
+.cl-admin-check        { font-size: 17px; margin-top: 1px; }
+.cl-item-name          { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
+.cl-admin-note         { font-size: 12px; color: var(--text3); margin-bottom: 8px; }
+
+/* User response buttons */
+.resp-btns { display: flex; gap: 7px; flex-wrap: wrap; }
+.resp-btn  {
+  padding:       5px 14px;
+  border-radius: 20px;
+  border:        1.5px solid var(--border2);
+  background:    none;
+  cursor:        pointer;
+  font-size:     13px;
+  font-family:   var(--sans);
+  font-weight:   500;
+  transition:    all .15s;
+  color:         var(--text2);
+}
+.resp-btn.active-ok    { border-color: var(--success); color: var(--success); background: var(--success-lt); }
+.resp-btn.active-issue { border-color: var(--danger);  color: var(--danger);  background: var(--danger-lt); }
+
+.issue-note-wrap { margin-top: 7px; animation: fadeIn .2s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ===== RESPONSIVE (MOBILE) ===== */
+@media (max-width: 640px) {
+  .user-header-inner { padding: 12px 14px; }
+  .user-wrap { padding: 16px 14px 60px; }
+
+  /* Step strip: scrollable, smaller text */
+  .step-strip { padding: 10px 12px; overflow-x: auto; }
+  .step-dot   { width: 24px; height: 24px; font-size: 11px; }
+  .step-name b    { font-size: 12px; }
+  .step-name      { font-size: 11px; }
+  .step-line      { flex: 0 0 18px; }
+
+  /* User checklist: reduce gap */
+  .user-cl-item { gap: 8px; padding: 9px 0; }
+  .cl-item-name { font-size: 13.5px; }
+
+  /* Response buttons: full width */
+  .resp-btns { flex-direction: column; }
+  .resp-btn  { width: 100%; text-align: center; }
+}
+
+/* ===== DONE / ERROR ===== */
+.done-page   { text-align: center; padding: 48px 20px; }
+.done-icon   { font-size: 64px; margin-bottom: 14px; animation: bounce .6s ease; }
+.done-page h2 { font-size: 20px; font-weight: 700; color: var(--success); margin-bottom: 8px; }
+.done-page p  { font-size: 14px; color: var(--text2); }
+@keyframes bounce { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+
+.error-page      { text-align: center; padding: 80px 20px; color: var(--text3); }
+.error-page .big { font-size: 56px; margin-bottom: 14px; }
+.error-page h2   { font-size: 18px; color: var(--text); margin-bottom: 8px; }
+
+/* ===== RECEIPT BOX ===== */
+.remark-box {
+  font-size: 13px;
+  color: #c0392b;
+  margin-bottom: 10px;
+  line-height: 1.8;
+}
+.remark-box span { font-weight: 600; }
+
+.receipt-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1.5px solid #555;
+  font-size: 13.5px;
+}
+.receipt-table td {
+  border: 1.5px solid #555;
+  padding: 8px 12px;
+  vertical-align: top;
+}
+.receipt-left  { width: 65%; }
+.receipt-right { width: 35%; text-align: center; }
+
+.test-title { font-weight: 700; font-size: 13.5px; margin-bottom: 8px; color: var(--text); }
+
+.test-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+.test-item input[type=checkbox] {
+  width: 15px; height: 15px;
+  accent-color: var(--primary);
+  cursor: pointer; flex-shrink: 0;
+}
+.test-item label {
+  font-size: 13.5px;
+  color: #b45309;
+  font-weight: 600;
+  cursor: pointer;
+  background: #fef9c3;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.test-other {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+.test-other input[type=checkbox] {
+  width: 15px; height: 15px;
+  accent-color: var(--primary);
+  cursor: pointer; flex-shrink: 0;
+}
+.test-other label {
+  font-size: 13.5px;
+  color: #b45309;
+  font-weight: 600;
+  cursor: pointer;
+  background: #fef9c3;
+  padding: 1px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.test-other-input {
+  flex: 1;
+  border: none;
+  border-bottom: 1px solid #aaa;
+  font-size: 13px;
+  font-family: var(--sans);
+  outline: none;
+  padding: 1px 4px;
+  background: #fefce8;
+}
+
+.sig-section {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sig-section label {
+  font-size: 13px;
+  color: var(--text2);
+  white-space: nowrap;
+}
+.date-input {
+  border: none;
+  border-bottom: 1.5px solid #555;
+  font-size: 13px;
+  font-family: var(--sans);
+  padding: 2px 4px;
+  background: transparent;
+  outline: none;
+  width: 140px;
+}
+
+.right-sig-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  min-height: 160px;
+  justify-content: center;
+}
+.right-sig-label {
+  font-size: 12px;
+  color: var(--text3);
+  text-align: center;
+}
+.sig-canvas-small {
+  width: 100%;
+  height: 130px;
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--r);
+  background: #fafafa;
+  cursor: crosshair;
+  display: block;
+}
+.sig-clear-btn {
+  font-size: 11px;
+  padding: 3px 10px;
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  cursor: pointer;
+  color: var(--text3);
+  font-family: var(--sans);
+}
+.sig-clear-btn:hover { border-color: var(--danger); color: var(--danger); }
