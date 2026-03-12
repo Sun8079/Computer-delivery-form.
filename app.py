@@ -2,6 +2,11 @@
 #  server.py — FastAPI Entry Point
 #  รัน: uvicorn server:app --host 0.0.0.0 --port 8000 --reload
 # ============================================================
+import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles        # serve ไฟล์ static (CSS/JS/HTML)
 from fastapi.responses import FileResponse          # ส่งไฟล์ HTML กลับโดยตรง
@@ -63,6 +68,12 @@ def admin_template_page():
 def user_page():
     # หน้าสำหรับพนักงานรับครุภัณฑ์ — เปิดด้วย token จาก URL
     return FileResponse("templates/user.html")
+
+
+@app.get("/create-form.html")
+def create_form_page():
+    # หน้าสร้าง/แก้ไขฟอร์ม (Admin only)
+    return FileResponse("templates/create-form.html")
 
 # ---- Serve Static Files (HTML/CSS/JS) ----
 # mount หลังสุด เพื่อไม่ให้ทับ API routes ด้านบน

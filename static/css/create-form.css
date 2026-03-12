@@ -1,0 +1,90 @@
+/* ============================================================
+   create-form.css — Styles เฉพาะหน้าสร้าง/แก้ไขฟอร์ม
+   ============================================================ */
+
+/* ===== NAV ===== */
+.nav {
+  background:  var(--primary);
+  color:       #fff;
+  display:     flex;
+  align-items: center;
+  padding:     0 24px;
+  height:      54px;
+  position:    sticky;
+  top:         0;
+  z-index:     200;
+  box-shadow:  0 2px 10px rgba(0,0,0,.25);
+  gap:         12px;
+}
+.nav-brand { margin-right: auto; }
+.nav-brand strong { font-size: 15px; letter-spacing: .03em; }
+.nav-brand span   { font-size: 11px; opacity: .55; font-family: var(--mono); display: block; margin-top: -1px; }
+.role-chip {
+  background:   rgba(255,255,255,.15);
+  color:        #fff;
+  font-size:    11px;
+  font-weight:  700;
+  padding:      3px 10px;
+  border-radius:20px;
+  letter-spacing:.05em;
+  font-family:  var(--mono);
+}
+.nav-actions { display: flex; gap: 8px; align-items: center; }
+
+.btn-nav-back {
+  background:   rgba(255,255,255,.1);
+  border:       1px solid rgba(255,255,255,.3);
+  color:        #fff;
+  font-size:    13px;
+  padding:      6px 14px;
+  border-radius: var(--r);
+  cursor:       pointer;
+  font-family:  var(--sans);
+  transition:   all .18s;
+}
+.btn-nav-back:hover { background: rgba(255,255,255,.22); }
+
+/* ===== CONTAINER ===== */
+.create-container {
+  padding:    26px 24px;
+  max-width:  1080px;
+  margin:     0 auto;
+}
+
+/* ===== CHECKLIST BUILDER ===== */
+.cl-section   { margin-bottom: 18px; }
+.cl-sect-head { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text3); padding: 7px 0; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+.cl-item      { display: grid; grid-template-columns: 1fr 200px; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px dashed var(--border); }
+.cl-item:last-child { border-bottom: none; }
+.cl-check     { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--border2); cursor: pointer; appearance: none; margin-top: 3px; flex-shrink: 0; transition: all .14s; }
+.cl-check:checked { background: var(--success); border-color: var(--success); }
+.cl-item-label { font-size: 13.5px; padding-top: 1px; }
+.cl-subitem .cl-item-label { cursor: pointer; }
+.cl-note       { font-size: 12.5px; }
+
+.cl-group       { margin-bottom: 8px; }
+.cl-group-label { font-size: 12px; font-weight: 700; color: var(--text2); padding: 6px 0 4px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.cl-subitem     { padding-left: 12px; display: grid; grid-template-columns: 22px 1fr 200px; gap: 10px; align-items: center; }
+
+/* ===== RESPONSIVE (MOBILE) ===== */
+@media (max-width: 768px) {
+  .nav {
+    flex-wrap: wrap;
+    height:    auto;
+    padding:   10px 14px;
+    gap:       6px;
+  }
+  .nav-brand   { flex: 1 0 auto; order: 0; }
+  .role-chip   { order: 1; }
+  .nav-actions { order: 2; }
+
+  .create-container { padding: 16px 14px; }
+
+  .cl-item    { grid-template-columns: 1fr; }
+  .cl-subitem { grid-template-columns: 22px 1fr; }
+  .cl-note    { grid-column: 1 / -1; }
+}
+
+@media (max-width: 480px) {
+  .nav-brand strong { font-size: 13px; }
+}

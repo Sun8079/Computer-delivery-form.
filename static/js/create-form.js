@@ -1,0 +1,431 @@
+// ============================================================
+//  create-form.js — Logic เฉพาะหน้าสร้าง/แก้ไขฟอร์ม
+// ============================================================
+//  โหลดใน: create-form.html เท่านั้น
+//
+//  ┌─────────────────────────────────────────────────────────┐
+//  │  AdminCreate.init()     — จุดเริ่มต้น, รองรับ ?edit=ID  │
+//  │  AdminCreate.reset()    — ล้างฟอร์มทั้งหมด              │
+//  │  AdminCreate.submit()   — บันทึกและสร้าง Link            │
+//  │  AdminCreate.cancel()   — ยกเลิก / คืนค่าเดิม           │
+//  └─────────────────────────────────────────────────────────┘
+// ============================================================
+
+function getAdminActorLabel() {
+  const profile = (window.Auth && typeof window.Auth.getAdminProfile === 'function')
+    ? window.Auth.getAdminProfile()
+    : { fullName: 'admin', empCode: '' };
+  return profile.empCode ? `${profile.fullName} (${profile.empCode})` : profile.fullName;
+}
+
+// ========================= CREATE FORM (Admin Only) =========================
+const AdminCreate = {
+  _currentLink: '',
+  _editingId: null,
+  _loadedForm: null,
+  _employeeLookupBound: false,
+  _currentTemplate: null,
+  _currentUserTestItems: null,
+
+  _getEmployees() {
+    if (typeof EMPLOYEES !== 'undefined' && Array.isArray(EMPLOYEES)) {
+      return EMPLOYEES;
+    }
+    if (Array.isArray(window.EMPLOYEES)) {
+      return window.EMPLOYEES;
+    }
+    return [];
+  },
+
+  _findEmployeeByCode(code) {
+    const normalized = String(code || '').trim().toUpperCase();
+    if (!normalized) return null;
+    return this._getEmployees().find(emp => emp.code === normalized) || null;
+  },
+
+  _findEmployeeByName(name) {
+    const normalized = String(name || '').trim().toLowerCase();
+    if (!normalized) return null;
+    const employees = this._getEmployees();
+    return employees.find(emp => String(emp.fullName || '').trim().toLowerCase() === normalized)
+      || employees.find(emp => String(emp.fullName || '').toLowerCase().includes(normalized))
+      || null;
+  },
+
+  _fillEmployeeFields(emp) {
+    if (!emp) return;
+    const codeInput = document.getElementById('c-code');
+    const nameInput = document.getElementById('c-name');
+    const deptInput = document.getElementById('c-dept');
+    if (codeInput) codeInput.value = emp.code;
+    if (nameInput) nameInput.value = emp.fullName;
+    if (deptInput) deptInput.value = `${emp.department} (${emp.company})`;
+  },
+
+  _bindEmployeeLookup() {
+    if (this._employeeLookupBound) return;
+
+    const codeInput = document.getElementById('c-code');
+    const nameInput = document.getElementById('c-name');
+    const deptInput = document.getElementById('c-dept');
+    const dataList  = document.getElementById('employeeCodeList');
+    const nameList  = document.getElementById('employeeNameList');
+
+    if (!codeInput || !nameInput || !deptInput) return;
+
+    const employees = this._getEmployees();
+
+    if (dataList && employees.length) {
+      dataList.innerHTML = employees.map(emp =>
+        `<option value="${emp.code}">${emp.fullName} (${emp.department} - ${emp.company})</option>`
+      ).join('');
+    }
+    if (nameList && employees.length) {
+      nameList.innerHTML = employees.map(emp =>
+        `<option value="${emp.fullName}">${emp.code} (${emp.department} - ${emp.company})</option>`
+      ).join('');
+    }
+
+    const applyByCode = () => {
+      const code = codeInput.value.trim().toUpperCase();
+      if (!code) return;
+      const emp = this._findEmployeeByCode(code);
+      if (emp) this._fillEmployeeFields(emp);
+    };
+
+    const applyByName = () => {
+      const name = nameInput.value.trim();
+      if (!name) return;
+      const emp = this._findEmployeeByName(name);
+      if (emp) this._fillEmployeeFields(emp);
+    };
+
+    codeInput.addEventListener('change', applyByCode);
+    codeInput.addEventListener('blur',   applyByCode);
+    codeInput.addEventListener('input',  applyByCode);
+    nameInput.addEventListener('change', applyByName);
+    nameInput.addEventListener('blur',   applyByName);
+    nameInput.addEventListener('input',  applyByName);
+
+    this._employeeLookupBound = true;
+  },
+
+  renderChecklist() {
+    const sections = this._currentTemplate || CHECKLIST_TEMPLATE;
+    document.getElementById('adminChecklist').innerHTML =
+      sections.map(sec => `
+        <div class="cl-section">
+          <div class="cl-sect-head">${sec.label}</div>
+          ${sec.items.map((item, i) => {
+            if (typeof item === 'string') {
+              const k = `${sec.category}_${i}`;
+              return `
+                <div class="cl-item">
+                  <span class="cl-item-label">${item}</span>
+                  <input type="text" class="cl-note" id="note_${k}" placeholder="ผลตรวจ ">
+                </div>
+              `;
+            }
+            return `
+              <div class="cl-group">
+                <div class="cl-group-label">${item.label}</div>
+                ${item.options.map((opt, oi) => {
+                  const k = `${sec.category}_${i}_${oi}`;
+                  return `
+                    <div class="cl-item cl-subitem">
+                      <input type="checkbox" class="cl-check" id="chk_${k}" data-key="${k}">
+                      <label for="chk_${k}" class="cl-item-label">${opt}</label>
+                      <input type="text" class="cl-note" id="note_${k}" placeholder="ผลตรวจ ">
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `).join('');
+  },
+
+  async loadTemplates() {
+    const sel = document.getElementById('c-template');
+    if (!sel) return;
+    try {
+      const r = await fetch('/api/form-templates', {
+        headers: { 'Authorization': `Bearer ${Auth.getToken()}` },
+      });
+      if (!r.ok) return;
+      const templates = await r.json();
+      sel.innerHTML = '<option value="">⬛ Default (มาตรฐานระบบ)</option>' +
+        templates.map(t =>
+          `<option value="${t.id}"${t.isDefault ? ' selected' : ''}>${t.name}${t.isDefault ? ' ⭐' : ''}</option>`
+        ).join('');
+      const pendingId = localStorage.getItem('dashboard_select_template');
+      if (pendingId) {
+        localStorage.removeItem('dashboard_select_template');
+        sel.value = pendingId;
+      }
+      if (sel.value) await this.onTemplateChange();
+    } catch (_) { /* ไม่มี template — ใช้ built-in */ }
+  },
+
+  async onTemplateChange() {
+    const id = document.getElementById('c-template')?.value;
+    if (!id) {
+      this._currentTemplate = null;
+      this._currentUserTestItems = null;
+      this.renderChecklist();
+      return;
+    }
+    try {
+      const r = await fetch(`/api/form-templates/${id}`, {
+        headers: { 'Authorization': `Bearer ${Auth.getToken()}` },
+      });
+      if (!r.ok) return;
+      const tmpl = await r.json();
+      this._currentTemplate = tmpl.sections?.length ? tmpl.sections : null;
+      this._currentUserTestItems = tmpl.userTestItems?.length ? tmpl.userTestItems : null;
+      this.renderChecklist();
+    } catch (_) { /* ใช้ default */ }
+  },
+
+  async reset() {
+    this._bindEmployeeLookup();
+
+    const fields = ['c-name','c-code','c-dept','c-email','c-asset','c-model','c-serial','c-spec','c-loc','c-note','c-edit-note'];
+    fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('c-date').value = Utils.today();
+    document.getElementById('c-type').value = 'new';
+    this._editingId = null;
+    this._loadedForm = null;
+    this._currentTemplate = null;
+    this._currentUserTestItems = null;
+    const editBox = document.getElementById('editModeBox');
+    if (editBox) editBox.style.display = 'none';
+    this._setEditNoteVisibility(false);
+    const submitBtn = document.getElementById('btnCreateSubmit');
+    if (submitBtn) submitBtn.textContent = '💾 บันทึกและสร้าง Link →';
+    await this.loadTemplates();
+    if (!document.getElementById('c-template')?.value) this.renderChecklist();
+    SigPad.reinit('sig-admin-create');
+  },
+
+  _setEditNoteVisibility(show) {
+    const editNoteGroup = document.getElementById('c-edit-note-group');
+    const editNoteInput = document.getElementById('c-edit-note');
+    if (editNoteGroup) editNoteGroup.style.display = show ? 'block' : 'none';
+    if (!show && editNoteInput) editNoteInput.value = '';
+  },
+
+  _appendHistory(form, action, note) {
+    const nowISO = new Date().toISOString();
+    const actor = getAdminActorLabel();
+    const history = Array.isArray(form.editHistory) ? form.editHistory : [];
+    history.push({
+      at: nowISO,
+      by: actor,
+      action,
+      note: note || '',
+      revision: form.revision || 1,
+    });
+    form.editHistory = history;
+    form.updatedAt = nowISO;
+    form.updatedBy = actor;
+  },
+
+  _applyFormToEditor(f) {
+    document.getElementById('c-name').value   = f.empName || '';
+    document.getElementById('c-code').value   = f.empCode || '';
+    document.getElementById('c-dept').value   = f.empDept || '';
+    document.getElementById('c-email').value  = f.empEmail || '';
+    document.getElementById('c-asset').value  = f.assetCode || '';
+    document.getElementById('c-model').value  = f.assetModel || '';
+    document.getElementById('c-serial').value = f.assetSerial || '';
+    document.getElementById('c-spec').value   = f.assetSpec || '';
+    document.getElementById('c-date').value   = f.deliverDate || Utils.today();
+    document.getElementById('c-type').value   = f.deliverType || 'new';
+    document.getElementById('c-loc').value    = f.location || '';
+    document.getElementById('c-note').value   = f.adminNote || '';
+    document.getElementById('c-edit-note').value = '';
+
+    this.renderChecklist();
+    const checklist = Array.isArray(f.checklist) ? f.checklist : [];
+    checklist.forEach(c => {
+      const chk  = document.getElementById(`chk_${c.key}`);
+      const note = document.getElementById(`note_${c.key}`);
+      if (chk)  chk.checked  = !!c.adminChecked;
+      if (note) note.value   = c.adminNote || '';
+    });
+
+    const editBox  = document.getElementById('editModeBox');
+    const editIdEl = document.getElementById('editModeFormId');
+    if (editBox)  editBox.style.display = 'block';
+    if (editIdEl) editIdEl.textContent  = f.id;
+    this._setEditNoteVisibility(true);
+
+    const submitBtn = document.getElementById('btnCreateSubmit');
+    if (submitBtn) submitBtn.textContent = '💾 บันทึกการแก้ไขและส่งกลับ User →';
+
+    SigPad.reinit('sig-admin-create');
+  },
+
+  cancel() {
+    if (this._editingId && this._loadedForm) {
+      this._applyFormToEditor(this._loadedForm);
+      return;
+    }
+    this.reset();
+  },
+
+  // โหลดฟอร์มที่มีอยู่เพื่อแก้ไข (ถูกเรียกจาก dashboard หรือ URL param ?edit=ID)
+  async loadForEdit(id) {
+    const f = await DB.getById(id);
+    if (!f) {
+      alert('ไม่พบฟอร์มที่ต้องการแก้ไข');
+      window.location.href = 'dashboard.html';
+      return;
+    }
+    await this.reset();
+    this._editingId = id;
+    this._loadedForm = JSON.parse(JSON.stringify(f));
+    this._applyFormToEditor(f);
+  },
+
+  async _getFileSig(inputId) {
+    const file = document.getElementById(inputId)?.files?.[0];
+    if (!file) return null;
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.readAsDataURL(file);
+    });
+  },
+
+  async submit() {
+    this._bindEmployeeLookup();
+
+    const codeInput = document.getElementById('c-code');
+    if (codeInput) {
+      const emp = this._findEmployeeByCode(codeInput.value);
+      if (emp) {
+        this._fillEmployeeFields(emp);
+      } else {
+        const nameInput = document.getElementById('c-name');
+        const byName = this._findEmployeeByName(nameInput?.value || '');
+        if (byName) this._fillEmployeeFields(byName);
+      }
+    }
+
+    const name  = document.getElementById('c-name').value.trim();
+    const code  = document.getElementById('c-code').value.trim();
+    const asset = document.getElementById('c-asset').value.trim();
+    if (!name || !code || !asset) {
+      alert('กรุณากรอกข้อมูลที่จำเป็น: ชื่อพนักงาน, รหัสพนักงาน, รหัสครุภัณฑ์');
+      return;
+    }
+
+    const editNote = document.getElementById('c-edit-note').value.trim();
+
+    // ---- โหมดแก้ไขฟอร์มที่มีอยู่ ----
+    if (this._editingId && !editNote) {
+      alert('กรุณาระบุหมายเหตุการแก้ไขก่อนบันทึก');
+      document.getElementById('c-edit-note')?.focus();
+      return;
+    }
+
+    if (this._editingId && this._loadedForm) {
+      const form = JSON.parse(JSON.stringify(this._loadedForm));
+      form.empName     = name;
+      form.empCode     = code;
+      form.empDept     = document.getElementById('c-dept').value.trim();
+      form.empEmail    = document.getElementById('c-email').value.trim();
+      form.assetCode   = asset;
+      form.assetModel  = document.getElementById('c-model').value.trim();
+      form.assetSerial = document.getElementById('c-serial').value.trim();
+      form.assetSpec   = document.getElementById('c-spec').value.trim();
+      form.deliverDate = document.getElementById('c-date').value || Utils.today();
+      form.deliverType = document.getElementById('c-type').value;
+      form.location    = document.getElementById('c-loc').value.trim();
+      form.adminNote   = document.getElementById('c-note').value.trim();
+      form.adminSig    = SigPad.getData('sig-admin-create') || await AdminCreate._getFileSig('sig-create-file') || form.adminSig || null;
+      form.adminFinalSig = null;
+      form.completedAt   = null;
+      form.status        = STATUS.SENT;
+      form.revision      = (form.revision || 1) + 1;
+      form.lastEditNote  = editNote;
+      form.lastReturnNote = '';
+      form.checklist = FormModel.readChecklistFromDOM().map(c => ({ ...c, userStatus: null, userNote: '' }));
+      form.userSig         = null;
+      form.userFilledAt    = null;
+      form.userIssues      = '';
+      const _defTestItemsEdit = ['สามารถ Login เข้าเครื่องได้', 'สามารถใช้งานโปรแกรมพื้นฐานได้', 'สามารถเข้าใช้งาน File sharing ได้', 'อื่นๆ'];
+      form.userTestItems   = this._currentUserTestItems || _defTestItemsEdit;
+      form.userReceiveDate = null;
+
+      this._appendHistory(form, 'edit_and_resend', editNote);
+
+      const ok = await DB.update(form);
+      if (!ok) {
+        alert('❌ บันทึกการแก้ไขไม่สำเร็จ กรุณาลองใหม่');
+        return;
+      }
+
+      this._currentLink = Utils.getUserPageUrl(form.token);
+      document.getElementById('modalLinkText').textContent = this._currentLink;
+      openModal('modalLink');
+      this.reset();
+      return;
+    }
+
+    // ---- โหมดสร้างฟอร์มใหม่ ----
+    const form = FormModel.create({
+      empName:     name,
+      empCode:     code,
+      empDept:     document.getElementById('c-dept').value.trim(),
+      empEmail:    document.getElementById('c-email').value.trim(),
+      assetCode:   asset,
+      assetModel:  document.getElementById('c-model').value.trim(),
+      assetSerial: document.getElementById('c-serial').value.trim(),
+      assetSpec:   document.getElementById('c-spec').value.trim(),
+      deliverDate: document.getElementById('c-date').value || Utils.today(),
+      deliverType: document.getElementById('c-type').value,
+      location:    document.getElementById('c-loc').value.trim(),
+      adminNote:   document.getElementById('c-note').value.trim(),
+      lastEditNote: editNote || '',
+      adminSig:    SigPad.getData('sig-admin-create') || await AdminCreate._getFileSig('sig-create-file'),
+    });
+
+    form.checklist = FormModel.readChecklistFromDOM();
+    const _defTestItems = ['สามารถ Login เข้าเครื่องได้', 'สามารถใช้งานโปรแกรมพื้นฐานได้', 'สามารถเข้าใช้งาน File sharing ได้', 'อื่นๆ'];
+    form.userTestItems = this._currentUserTestItems || _defTestItems;
+
+    const created = await DB.add(form);
+    if (!created) {
+      alert('❌ บันทึกฟอร์มไม่สำเร็จ กรุณาตรวจสอบการ login และลองใหม่');
+      return;
+    }
+
+    this._currentLink = Utils.getUserPageUrl(created.token || form.token);
+    document.getElementById('modalLinkText').textContent = this._currentLink;
+    openModal('modalLink');
+  },
+
+  copyLink() {
+    navigator.clipboard.writeText(this._currentLink)
+      .then(() => alert('คัดลอก Link แล้ว!'));
+  },
+
+  // ========================= INIT =========================
+  async init() {
+    initModalOverlays();
+    // ตรวจสอบ URL param ?edit=ID สำหรับโหมดแก้ไข
+    const editId = new URLSearchParams(window.location.search).get('edit');
+    if (editId) {
+      await this.loadForEdit(editId);
+    } else {
+      await this.reset();
+    }
+  },
+};
+
+// ========================= BOOTSTRAP =========================
+document.addEventListener('DOMContentLoaded', () => AdminCreate.init());

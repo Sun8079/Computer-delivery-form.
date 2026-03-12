@@ -1,0 +1,84 @@
+/* ============================================================
+   dashboard.css — Styles เฉพาะหน้า Dashboard / ประวัติ
+   ============================================================ */
+
+/* ===== NAV ===== */
+.nav {
+  background:  var(--primary);
+  color:       #fff;
+  display:     flex;
+  align-items: center;
+  padding:     0 24px;
+  height:      54px;
+  position:    sticky;
+  top:         0;
+  z-index:     200;
+  box-shadow:  0 2px 10px rgba(0,0,0,.25);
+  gap:         12px;
+}
+.nav-brand { margin-right: auto; }
+.nav-brand strong { font-size: 15px; letter-spacing: .03em; }
+.nav-brand span   { font-size: 11px; opacity: .55; font-family: var(--mono); display: block; margin-top: -1px; }
+.role-chip {
+  background:   rgba(255,255,255,.15);
+  color:        #fff;
+  font-size:    11px;
+  font-weight:  700;
+  padding:      3px 10px;
+  border-radius:20px;
+  letter-spacing:.05em;
+  font-family:  var(--mono);
+}
+.nav-tabs    { display: flex; gap: 2px; }
+.nav-tab     { background: none; border: none; color: rgba(255,255,255,.6); padding: 8px 16px; cursor: pointer; border-radius: var(--r); font-family: var(--sans); font-size: 13.5px; transition: all .18s; }
+.nav-tab:hover  { background: rgba(255,255,255,.1); color: #fff; }
+.nav-tab.active { background: rgba(255,255,255,.18); color: #fff; font-weight: 700; }
+
+/* "สร้างฟอร์ม" button in nav */
+.btn-nav-create {
+  background:   rgba(255,255,255,.12);
+  border:       1.5px solid rgba(255,255,255,.35);
+  color:        #fff;
+  font-size:    13px;
+  font-weight:  600;
+  padding:      6px 14px;
+  border-radius:var(--r);
+  cursor:       pointer;
+  font-family:  var(--sans);
+  transition:   all .18s;
+  white-space:  nowrap;
+}
+.btn-nav-create:hover { background: rgba(255,255,255,.24); }
+
+/* ===== PAGE ===== */
+.page        { display: none; padding: 26px 24px; max-width: 1080px; margin: 0 auto; }
+.page.active { display: block; }
+
+/* ===== RESPONSIVE (MOBILE) ===== */
+@media (max-width: 768px) {
+  .nav {
+    flex-wrap: wrap;
+    height:    auto;
+    padding:   10px 14px;
+    gap:       6px;
+  }
+  .nav-brand      { flex: 1 0 auto; order: 0; }
+  .role-chip      { order: 1; }
+  .nav-tabs       { order: 3; width: 100%; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-tab        { white-space: nowrap; padding: 7px 12px; font-size: 13px; }
+  .btn-nav-create { order: 2; }
+
+  .page { padding: 16px 14px; }
+}
+
+@media (max-width: 480px) {
+  .nav-brand strong { font-size: 13px; }
+  .nav-tab { padding: 6px 10px; font-size: 12px; }
+}
+
+/* ===== USER TEST BOX (admin view modal) ===== */
+.user-test-box   { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--r); padding: 12px 16px; margin: 10px 0; }
+.user-test-title { font-size: 13px; font-weight: 700; color: var(--success); margin-bottom: 8px; }
+.user-test-list  { display: flex; flex-wrap: wrap; gap: 6px; }
+.user-test-item  { font-size: 13px; background: #dcfce7; color: #166534; padding: 3px 10px; border-radius: 20px; border: 1px solid #bbf7d0; }

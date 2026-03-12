@@ -324,7 +324,16 @@ async function printFormById(id) {
 <div class="user-box">
   <div class="hd">ข้อมูลที่ User กรอก</div>
   <div class="row"><b>วันที่รับมอบ:</b> ${f.userReceiveDate ? Utils.fmtDate(f.userReceiveDate) : '—'}</div>
-  <div class="row"><b>ผลการตรวจ:</b> ปกติ ${checklist.filter(c => c.adminChecked && c.userStatus === 'ok').length} รายการ, มีปัญหา ${checklist.filter(c => c.adminChecked && c.userStatus === 'issue').length} รายการ</div>
+  <div class="row" style="align-items:flex-start"><b style="white-space:nowrap">ผลการตรวจ:</b>
+    <span style="display:flex;flex-direction:column;gap:2px;margin-left:4px">
+      ${checklist.filter(c => c.adminChecked && c.userStatus).map(c => `
+        <span style="font-size:12px">
+          ${c.userStatus === 'issue' ? '⚠️' : '✅'}&nbsp;${c.item || c.key}
+          ${c.userNote ? `<span style="color:#b91c1c;font-size:11px"> — ${c.userNote}</span>` : ''}
+        </span>
+      `).join('') || '<span style="color:var(--text3)">—</span>'}
+    </span>
+  </div>
   <div class="row"><b>รายการทดสอบ:</b> ${(Array.isArray(f.userTestItems) && f.userTestItems.length) ? f.userTestItems.join(', ') : '—'}</div>
   <div class="row"><b>หมายเหตุ:</b> ${f.userIssues || '—'}</div>
 </div>

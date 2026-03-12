@@ -9,20 +9,17 @@ function getAdminActorLabel() {
 
 // ========================= PAGE NAVIGATION =========================
 const Page = {
-  _tabs: ['dashboard', 'create', 'history'],  // ลำดับ tab ตรงกับ index ใน .nav-tab
+  _tabs: ['dashboard', 'history'],  // ลำดับ tab ตรงกับ index ใน .nav-tab
 
   async show(name) {
-    // ซ่อนทุก page และ nav-tab ออกก่อน
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-tab').forEach((t, i) => {
-      t.classList.toggle('active', this._tabs[i] === name);  // highlight tab ที่ตรงกัน
+      t.classList.toggle('active', this._tabs[i] === name);
     });
-    document.getElementById(`page-${name}`)?.classList.add('active');  // แสดง page ใหม่
+    document.getElementById(`page-${name}`)?.classList.add('active');
 
-    // โหลดข้อมูลตามหน้าที่เลือก
     if (name === 'dashboard') await Dashboard.render();
     if (name === 'history')   await History.render();
-    if (name === 'create')    await AdminCreate.reset();  // ล้างฟอร์มและโหลด template
   },
 };
 
@@ -398,19 +395,8 @@ const AdminCreate = {
   },
 
   async editExisting(id) {
-    const f = await DB.getById(id);
-    if (!f) {
-      alert('ไม่พบฟอร์มที่ต้องการแก้ไข');
-      return;
-    }
-
-    await Page.show('create');
-
-    // สำคัญ: ต้องตั้งค่าหลัง Page.show('create') เพราะ show() จะเรียก reset()
-    // ถ้าตั้งก่อน ค่านี้จะโดนล้าง และปุ่มยกเลิกจะคืนค่าเดิมไม่ได้
-    this._editingId = id;
-    this._loadedForm = JSON.parse(JSON.stringify(f));
-    this._applyFormToEditor(f);
+    // redirect ไปหน้าสร้างฟอร์มพร้อม param ?edit=ID
+    window.location.href = `create-form.html?edit=${encodeURIComponent(id)}`;
   },
 
   async _getFileSig(inputId) {
@@ -707,7 +693,6 @@ const ReviewModal = {
 
 // ========================= INIT =========================
 document.addEventListener('DOMContentLoaded', async () => {
-  initModalOverlays();  // ผูก event ปิด modal เมื่อคลิก overlay
+  initModalOverlays();
   await Dashboard.render();
-  AdminCreate.reset();  // render checklist ครั้งแรก
 });
