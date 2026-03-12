@@ -145,7 +145,9 @@ const Auth = {
   _renderAdminChip(name) {
     const chip = document.getElementById('adminRoleChip');
     if (!chip) return;
-    chip.textContent = `👤 ${name || 'ADMIN'}`;
+    // ถ้า chip มี data-prefix ให้ใช้ prefix นั้น (เช่น ⚙️) มิฉะนั้นใช้ 👤
+    const prefix = chip.dataset.prefix || '👤';
+    chip.textContent = `${prefix} ${name || 'ADMIN'}`;
   },
 
   // ============================================================
@@ -161,7 +163,8 @@ const Auth = {
       return;
     }
 
-    if (page === 'dashboard') {
+    const adminPages = ['dashboard', 'create-form', 'admin'];
+    if (adminPages.includes(page)) {
       // ถ้าไม่มี token → redirect ออก
       if (!this.isAdmin()) {
         window.location.href = 'main.html';
