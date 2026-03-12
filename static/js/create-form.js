@@ -86,26 +86,47 @@ const AdminCreate = {
       ).join('');
     }
 
-    const applyByCode = () => {
-      const code = codeInput.value.trim().toUpperCase();
-      if (!code) return;
+    const codeHint = document.getElementById('c-code-hint');
+    const nameHint = document.getElementById('c-name-hint');
+
+    const showHint = (el, msg) => { if (el) { el.textContent = msg; el.style.display = msg ? 'block' : 'none'; } };
+
+    const applyByCode = (showError) => {
+      const code = codeInput.value.trim();
+      if (!code) { showHint(codeHint, ''); return; }
       const emp = this._findEmployeeByCode(code);
-      if (emp) this._fillEmployeeFields(emp);
+      if (emp) {
+        this._fillEmployeeFields(emp);
+        showHint(codeHint, '');
+        showHint(nameHint, '');
+      } else if (showError) {
+        showHint(codeHint, `ไม่พบข้อมูลพนักงานรหัส "${code}"`);
+      }
     };
 
-    const applyByName = () => {
+    const applyByName = (showError) => {
       const name = nameInput.value.trim();
-      if (!name) return;
+      if (!name) { showHint(nameHint, ''); return; }
       const emp = this._findEmployeeByName(name);
-      if (emp) this._fillEmployeeFields(emp);
+      if (emp) {
+        this._fillEmployeeFields(emp);
+        showHint(nameHint, '');
+        showHint(codeHint, '');
+      } else if (showError) {
+        showHint(nameHint, `ไม่พบข้อมูลพนักงานชื่อ "${name}"`);
+      }
     };
 
-    codeInput.addEventListener('change', applyByCode);
-    codeInput.addEventListener('blur',   applyByCode);
-    codeInput.addEventListener('input',  applyByCode);
-    nameInput.addEventListener('change', applyByName);
-    nameInput.addEventListener('blur',   applyByName);
-    nameInput.addEventListener('input',  applyByName);
+    // ระหว่างพิมพ์ — แค่ล้าง error; ไม่ autofill จากชื่อ (กัน fill กลางคัน)
+    // code ใช้ exact match เลย autofill ระหว่างพิมพ์ได้
+    codeInput.addEventListener('input',  () => { showHint(codeHint, ''); applyByCode(false); });
+    // name ใช้ includes() เลยรอ change/blur เท่านั้น
+    nameInput.addEventListener('input',  () => { showHint(nameHint, ''); });
+    // เมื่อออกจากช่อง / เลือกจาก datalist — แสดง error ถ้าไม่เจอ
+    codeInput.addEventListener('change', () => applyByCode(true));
+    codeInput.addEventListener('blur',   () => applyByCode(true));
+    nameInput.addEventListener('change', () => applyByName(true));
+    nameInput.addEventListener('blur',   () => applyByName(true));
 
     this._employeeLookupBound = true;
   },

@@ -36,8 +36,16 @@
     <div class="card-header"><span class="card-title">👤 ข้อมูลพนักงานผู้รับ</span></div>
     <div class="card-body">
       <div class="form-grid">
-        <div class="form-group"><label>ชื่อ-นามสกุล <span class="req">*</span></label><input type="text" id="c-name" list="employeeNameList" placeholder="พิมพ์ชื่อหรือเลือกจากรายการ"></div>
-        <div class="form-group"><label>รหัสพนักงาน <span class="req">*</span></label><input type="text" id="c-code" list="employeeCodeList" placeholder="เช่น 1001"></div>
+        <div class="form-group">
+          <label>ชื่อ-นามสกุล <span class="req">*</span></label>
+          <input type="text" id="c-name" list="employeeNameList" placeholder="พิมพ์ชื่อหรือเลือกจากรายการ">
+          <small id="c-name-hint" style="display:none;color:#dc2626;font-size:12px;margin-top:3px"></small>
+        </div>
+        <div class="form-group">
+          <label>รหัสพนักงาน <span class="req">*</span></label>
+          <input type="text" id="c-code" list="employeeCodeList" placeholder="เช่น 1001">
+          <small id="c-code-hint" style="display:none;color:#dc2626;font-size:12px;margin-top:3px"></small>
+        </div>
         <div class="form-group"><label>แผนก</label><input type="text" id="c-dept" placeholder="เช่น ฝ่ายบัญชี"></div>
         <div class="form-group"><label>Email (สำหรับส่ง Link)</label><input type="email" id="c-email" placeholder="somchai@company.com"></div>
       </div>

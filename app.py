@@ -15,6 +15,7 @@ from backend.utils.db import engine, Base           # SQLAlchemy engine + Base O
 from backend.auth import route as auth              # auth router
 from backend.forms import route as forms            # forms router
 from backend.form_templates import route as templates  # template management router
+from backend.employees import route as employees    # employee directory router
 from backend.utils.bootstrap import run_all          # startup: DB + tables + migrations + seed
 
 # ---- Startup ทั้งหมดจัดการใน backend/utils/bootstrap/ ----
@@ -38,6 +39,7 @@ app.add_middleware(
 app.include_router(auth.router)   # /api/auth/login, /api/auth/verify
 app.include_router(forms.router)  # /api/forms/...
 app.include_router(templates.router)  # /api/form-templates/...
+app.include_router(employees.router)  # /api/employees/...
 
 
 @app.get("/")
