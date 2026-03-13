@@ -88,6 +88,24 @@ const Utils = {
     // สร้าง URL จาก origin เสมอ — ไม่ขึ้นกับหน้าที่เรียก
     return `${window.location.origin}/user.html?token=${token}`;
   },
+
+  // ชื่อผู้สร้างฟอร์ม (ใช้แสดงแทนรหัสฟอร์มบนหน้าเว็บ)
+  getFormCreatorName(form) {
+    if (!form) return '—';
+    const raw = (Array.isArray(form.editHistory) ? form.editHistory[0]?.by : null) || form.updatedBy || '';
+    const currentName = (window.Auth && typeof window.Auth.getAdminProfile === 'function')
+      ? (window.Auth.getAdminProfile().fullName || '')
+      : '';
+
+    // legacy data บางรายการเก็บผู้สร้างเป็น "admin" ให้แสดงชื่อจริงของบัญชีที่ล็อกอินแทน
+    const normalized = String(raw).trim();
+    const resolved = /^admin(\s*\(.*\))?$/i.test(normalized)
+      ? (currentName || 'ผู้ดูแลระบบ')
+      : normalized;
+
+    // ถ้ารูปแบบเป็น "ชื่อ (EMPxxx)" ให้แสดงเฉพาะชื่อ
+    return resolved.replace(/\s*\([^)]*\)\s*$/, '') || '—';
+  },
 };
 
 // -------------------- FORM MODEL --------------------

@@ -64,7 +64,7 @@ function buildFormView(f) {
     <!-- Status & Meta -->
     <div class="view-meta">
       ${renderBadge(f.status)}
-      <span class="mono text-muted">${f.id}</span>
+      <span class="mono text-muted">ผู้สร้าง: ${Utils.getFormCreatorName(f)}</span>
       <span class="text-muted small">สร้าง: ${Utils.fmtDateTime(f.createdAt)}</span>
       ${f.revision ? `<span class="text-muted small">Revision: ${f.revision}</span>` : ''}
       ${f.updatedBy ? `<span class="text-muted small">อัปเดตโดย: ${f.updatedBy}</span>` : ''}

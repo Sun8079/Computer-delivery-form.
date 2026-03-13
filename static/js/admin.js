@@ -55,7 +55,7 @@ const Dashboard = {
     }
     tbody.innerHTML = forms.map(f => `
       <tr>
-        <td><span class="mono" style="color:var(--primary-lt)">${f.id}</span></td>
+        <td><span class="mono" style="color:var(--primary-lt)">${Utils.getFormCreatorName(f)}</span></td>
         <td><b>${f.empName}</b></td>
         <td><span class="mono">${f.empCode}</span></td>
         <td>${f.empDept || '—'}</td>
@@ -104,7 +104,7 @@ const History = {
     }
     tbody.innerHTML = filtered.map(f => `
       <tr>
-        <td><span class="mono" style="color:var(--primary-lt)">${f.id}</span></td>
+        <td><span class="mono" style="color:var(--primary-lt)">${Utils.getFormCreatorName(f)}</span></td>
         <td><b>${f.empName}</b></td>
         <td><span class="mono">${f.empCode}</span></td>
         <td>${f.empDept || '—'}</td>
@@ -558,7 +558,7 @@ const ViewModal = {
     if (!f) return;
 
     // ตั้งค่า title และ body ของ modal
-    document.getElementById('modalViewTitle').textContent = `ฟอร์ม ${f.id} — ${f.empName}`;
+    document.getElementById('modalViewTitle').textContent = `ผู้สร้าง: ${Utils.getFormCreatorName(f)} — ${f.empName}`;
     document.getElementById('modalViewBody').innerHTML = buildFormView(f);  // สร้าง HTML จาก ui.js
 
     document.getElementById('btnPrintView').onclick = () => printFormById(id);  // ผูกปุ่มพิมพ์

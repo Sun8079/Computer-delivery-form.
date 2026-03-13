@@ -124,7 +124,7 @@ const UserApp = {
               กรุณากรอก <b>รหัสพนักงาน (ชื่อผู้ใช้)</b> เพื่อเข้าใช้งานลิงก์นี้
             </div>
             <div style="font-size:12px;color:var(--text3);margin-bottom:12px">
-              ฟอร์ม: <span class="mono">${f.id}</span>
+              ผู้สร้างฟอร์ม: <span class="mono">${Utils.getFormCreatorName(f)}</span>
             </div>
             <form onsubmit="return UserApp.verifyEmployee(event)">
               <div class="form-group" style="margin-bottom:12px">
@@ -187,7 +187,7 @@ const UserApp = {
         <div class="card" style="margin-bottom:14px">
           <div class="card-header" style="background:var(--primary);color:#fff">
             <span class="card-title" style="color:#fff">📋 ข้อมูลการส่งมอบ</span>
-            <span style="font-size:11.5px;font-family:var(--mono);opacity:.7">${f.id}</span>
+            <span style="font-size:11.5px;font-family:var(--mono);opacity:.7">ผู้สร้าง: ${Utils.getFormCreatorName(f)}</span>
           </div>
           <div class="card-body">
             <div class="lock-notice">
@@ -239,7 +239,7 @@ const UserApp = {
                       <span style="color:var(--success);font-size:16px;flex-shrink:0">✅</span>
                       <div>
                         <div style="font-size:13.5px;font-weight:500">${c.group ? `<span style="font-size:12px;color:var(--text3)">${c.group} › </span>` : ''}${c.item}</div>
-                        ${c.adminNote ? `<div style="font-size:12px;color:var(--text3);margin-top:2px">📌 หมายเหตุ: ${c.adminNote}</div>` : ''}
+                        ${c.adminNote ? `<div style="font-size:12px;color:var(--text3);margin-top:2px">📌 ผลตรวจสอบ: ${c.adminNote}</div>` : ''}
                       </div>
                     </div>
                   `).join('')}
@@ -425,7 +425,7 @@ const UserApp = {
             <p>${msg}</p>
             ${f ? `
               <div style="margin-top:20px;padding:12px 16px;background:var(--surface2);border-radius:8px;font-size:13px;color:var(--text2);display:inline-block">
-                รหัสฟอร์ม: <b style="font-family:var(--mono)">${f.id}</b>
+                ผู้สร้างฟอร์ม: <b style="font-family:var(--mono)">${Utils.getFormCreatorName(f)}</b>
                 &nbsp;|&nbsp; ครุภัณฑ์: <b>${f.assetCode}</b>
               </div>
             ` : ''}
