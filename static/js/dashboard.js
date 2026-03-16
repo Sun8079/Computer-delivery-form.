@@ -90,6 +90,8 @@ const Dashboard = {
     if (f.status === STATUS.COMPLETED) {
       b += `<button class="btn btn-outline btn-sm" onclick="printFormById('${f.id}')">🖨️</button>`;
     }
+    // ปุ่มลบเป็น hard delete (ลบจากฐานข้อมูลจริง)
+    b += ` <button class="btn btn-outline btn-sm" style="border-color:var(--danger);color:var(--danger)" onclick="AdminCreate.deleteExisting('${f.id}')">🗑 ลบ</button>`;
     return b;
   },
 };
@@ -139,8 +141,24 @@ const AdminCreate = {
   async copyExistingLink(id) {
     const f = await DB.getById(id);
     if (!f) return;
-    const link = Utils.getUserPageUrl(f.token);
+    const link = Utils.getUserPageUrl(f.token, f.id);
     navigator.clipboard.writeText(link).then(() => alert('คัดลอก Link แล้ว!'));
+  },
+
+  // ลบฟอร์มที่มีอยู่
+  async deleteExisting(id) {
+    // ยืนยันซ้ำก่อนลบเพราะไม่สามารถกู้คืนได้
+    const confirmed = window.confirm(`ยืนยันการลบฟอร์ม ${id} ?\n\nการลบจะไม่สามารถกู้คืนได้`);
+    if (!confirmed) return;
+
+    const ok = await DB.delete(id);
+    if (!ok) {
+      alert('❌ ลบฟอร์มไม่สำเร็จ กรุณาลองใหม่');
+      return;
+    }
+
+    await Promise.all([Dashboard.render(), History.render()]);
+    alert('🗑 ลบฟอร์มเรียบร้อยแล้ว');
   },
 };
 
@@ -153,7 +171,7 @@ const ViewModal = {
     const f = await DB.getById(id);
     if (!f) return;
 
-    document.getElementById('modalViewTitle').textContent = `ผู้สร้าง: ${Utils.getFormCreatorName(f)} — ${f.empName}`;
+    document.getElementById('modalViewTitle').textContent = `ผู้สร้าง: ${Utils.getFormCreatorName(f)}  ${f.empName}`;
     document.getElementById('modalViewBody').innerHTML = buildFormView(f);
     document.getElementById('btnPrintView').onclick = () => printFormById(id);
     openModal('modalView');

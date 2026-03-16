@@ -116,10 +116,21 @@ def login(req: LoginRequest):
 def verify(current=Depends(get_current_admin)):
     """GET /api/auth/verify — ตรวจสอบว่า token ยังใช้ได้ (frontend เรียกตอน page load)"""
     # current คือ payload ที่ dependency get_current_admin decode มาแล้ว
+    username = current.get("sub")
+    full_name = current.get("full_name")
+    emp_code = current.get("emp_code")
+
+    # รองรับ token เก่าที่ไม่มี full_name/emp_code: ดึงจากตาราง users ตาม username
+    if username and (not full_name or not emp_code):
+        account = auth_service.find_account(username)
+        if account:
+            full_name = full_name or account.full_name
+            emp_code = emp_code or account.emp_code
+
     return {
         "valid": True,
         "role": current["role"],
-        "username": current.get("sub"),
-        "full_name": current.get("full_name"),
-        "emp_code": current.get("emp_code"),
+        "username": username,
+        "full_name": full_name,
+        "emp_code": emp_code,
     }

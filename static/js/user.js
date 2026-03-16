@@ -50,18 +50,33 @@ const UserApp = {
   form:         null,      // ข้อมูลฟอร์มที่โหลดมาจาก API
   userStatuses: {},        // { key: 'ok' | 'issue' } — ยังไม่ใช้ใน version ปัจจุบัน
   token:        null,      // token จาก URL query param
+  formId:       null,      // id จาก URL query param (ใช้ยืนยันฟอร์มให้ตรงฉบับ)
 
   // ---- โหลดฟอร์มจาก token ใน URL ----
   async init() {
-    const token = new URLSearchParams(window.location.search).get('token');  // อ่าน ?token=XXX
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');  // อ่าน ?token=XXX
+    const formId = params.get('id');
     this.token = token;
+    this.formId = formId;
 
     if (!token) {
       // ไม่มี token — แสดง error ทันที
       return this._renderError('ไม่พบ Token', 'Link ไม่ถูกต้อง กรุณาติดต่อเจ้าหน้าที่ IT');
     }
 
-    this.form = await DB.getByToken(token);  // GET /api/forms/token/{token}
+    // ถ้ามี id มาด้วย ให้ใช้ endpoint แบบเจาะจงและไม่ fallback ด้วย token-only
+    // เพื่อป้องกันการเปิดฟอร์มผิดฉบับเมื่อ token ไม่ unique
+    if (token && formId) {
+      // ลิงก์ใหม่ต้องเปิดด้วย token+id ตรงกัน หากไม่ตรงให้ fail ทันที
+      this.form = await DB.getByTokenAndId(token, formId);
+      if (!this.form) {
+        return this._renderError('ไม่พบฟอร์ม', 'ลิงก์นี้ไม่ตรงกับแบบฟอร์มที่ระบุ หรือข้อมูลถูกเปลี่ยนแปลง');
+      }
+    } else {
+      // รองรับลิงก์เก่าที่ยังมีเฉพาะ token
+      this.form = await DB.getByToken(token);  // fallback รองรับ link เก่า
+    }
 
     if (!this.form) {
       return this._renderError('ไม่พบฟอร์ม', 'ไม่พบข้อมูลในระบบ หรือ Link ผิดพลาด');
@@ -236,7 +251,7 @@ const UserApp = {
                   <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);padding-bottom:5px;border-bottom:1px solid var(--border);margin-bottom:6px">${sec.label}</div>
                   ${sec.items.map(c => `
                     <div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px dashed var(--border)">
-                      <span style="color:var(--success);font-size:16px;flex-shrink:0">✅</span>
+                      <span style="color:var(--success);font-size:16px;flex-shrink:0"></span>
                       <div>
                         <div style="font-size:13.5px;font-weight:500">${c.group ? `<span style="font-size:12px;color:var(--text3)">${c.group} › </span>` : ''}${c.item}</div>
                         ${c.adminNote ? `<div style="font-size:12px;color:var(--text3);margin-top:2px">📌 ผลตรวจสอบ: ${c.adminNote}</div>` : ''}

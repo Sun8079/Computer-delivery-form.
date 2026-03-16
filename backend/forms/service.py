@@ -34,6 +34,12 @@ class FormService:
         return FormRepository.get_by_token(db, token)
 
     @staticmethod
+    def get_form_by_token_and_id(db: Session, token: str, form_id: str):
+        # ดึงด้วย token + id เพื่อผูกลิงก์กับฟอร์มที่ถูกต้องแบบเจาะจง
+        # ใช้โดยหน้า user เพื่อกันเปิดผิดฟอร์มเมื่อข้อมูลมีความคลุมเครือ
+        return FormRepository.get_by_token_and_id(db, token, form_id)
+
+    @staticmethod
     def create_form(db: Session, form_data: dict):
         # สร้างฟอร์มใหม่
         return FormRepository.create(db, form_data)

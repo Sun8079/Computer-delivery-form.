@@ -26,10 +26,10 @@
 //  └─────────────────────────────────────────────────────────┘
 //
 //  Call Flow:
-//    admin.js → _renderTable()    → renderBadge(), _actionBtns()
-//    admin.js → ViewModal.open()  → buildFormView(f) → renderSigBox()
-//    admin.js → _actionBtns()     → printFormById(id)
-//    admin.js → DOMContentLoaded  → initModalOverlays()
+//    dashboard.js → _renderTable()    → renderBadge(), _actionBtns()
+//    dashboard.js → ViewModal.open()  → buildFormView(f) → renderSigBox()
+//    dashboard.js → _actionBtns()     → printFormById(id)
+//    dashboard.js / create-form.js    → initModalOverlays()
 //
 // ============================================================
 

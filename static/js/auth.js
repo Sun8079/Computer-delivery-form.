@@ -95,10 +95,12 @@ const Auth = {
 
     // รองรับทั้งแบบกรอก token ตรงๆ และวาง URL เต็ม
     let token = tokenInput;
+    let formId = '';
     try {
       const parsed = new URL(tokenInput);
       const fromURL = parsed.searchParams.get('token');  // ดึง token จาก query param
       if (fromURL) token = fromURL;
+      formId = parsed.searchParams.get('id') || '';
     } catch (e) {}  // ถ้า parse URL ไม่ได้ → ใช้ tokenInput ตรงๆ
 
     if (!token) {
@@ -107,7 +109,10 @@ const Auth = {
     }
 
     // redirect ไป user.html พร้อม token ใน URL — ไม่ต้อง login
-    window.location.href = `user.html?token=${encodeURIComponent(token)}`;
+    // ถ้า URL ต้นทางมี id ของฟอร์มอยู่แล้ว จะส่งต่อไปด้วยเพื่อรักษาความแม่นยำ
+    const query = new URLSearchParams({ token });
+    if (formId) query.set('id', formId);
+    window.location.href = `user.html?${query.toString()}`;
   },
 
   // ============================================================

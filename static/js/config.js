@@ -18,10 +18,11 @@
 //  └─────────────────────────────────────────────────────────┘
 //
 //  ใครใช้ไฟล์นี้:
-//    models.js  → CHECKLIST_TEMPLATE (สร้าง form.checklist)
-//    ui.js      → CHECKLIST_TEMPLATE, STATUS_LABEL
-//    admin.js   → STATUS, CHECKLIST_TEMPLATE, DELIVER_TYPES
-//    user.js    → STATUS, CHECKLIST_TEMPLATE
+//    models.js       → CHECKLIST_TEMPLATE (สร้าง form.checklist)
+//    ui.js           → CHECKLIST_TEMPLATE, STATUS_LABEL
+//    dashboard.js    → STATUS
+//    create-form.js  → STATUS, CHECKLIST_TEMPLATE, DELIVER_TYPES
+//    user.js         → STATUS, CHECKLIST_TEMPLATE
 //
 // ============================================================
 

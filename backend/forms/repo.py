@@ -32,6 +32,7 @@ def form_to_dict(db_form) -> dict:
         "lastEditNote":    db_form.last_edit_note or "",
         "lastReturnNote":  db_form.last_return_note or "",
         "updatedBy":       db_form.updated_by or "",
+        "adminCreatorEmpCode": db_form.createrd_by or "",
         "editHistory":     db_form.edit_history or [],
         "createdAt":       db_form.admin_created_at.isoformat() if db_form.admin_created_at else None,
         "updatedAt":       db_form.updated_at.isoformat() if db_form.updated_at else None,
@@ -73,6 +74,7 @@ def _apply_form_data(db_form, form_data: dict, partial: bool = False):
     def _set(camel_key, orm_attr, default=None):
         if partial and camel_key not in form_data:
             return   # ข้ามถ้าไม่ได้ส่งมา
+        # map key จาก frontend (camelCase) ไปยัง ORM attribute
         setattr(db_form, orm_attr, form_data.get(camel_key, default))
 
     _set("status",          "status",           "sent")
@@ -80,6 +82,7 @@ def _apply_form_data(db_form, form_data: dict, partial: bool = False):
     _set("lastEditNote",    "last_edit_note",    "")
     _set("lastReturnNote",  "last_return_note",  "")
     _set("updatedBy",       "updated_by",        "")
+    _set("adminCreatorEmpCode", "createrd_by", "")
     _set("editHistory",     "edit_history",      [])
 
     _set("empName",         "emp_name",          "")
@@ -122,14 +125,26 @@ class FormRepository:
 
     @staticmethod
     def get_by_id(db: Session, form_id: str):
+        # ใช้ lookup ด้วย primary key ของฟอร์ม
         return db.query(models.Form).filter(models.Form.id == form_id).first()
 
     @staticmethod
     def get_by_token(db: Session, token: str):
+        # สำหรับลิงก์ user แบบเก่า (token อย่างเดียว)
         return db.query(models.Form).filter(models.Form.token == token).first()
 
     @staticmethod
+    def get_by_token_and_id(db: Session, token: str, form_id: str):
+        # สำหรับลิงก์ใหม่ที่ผูก token + id เพื่อกันเปิดผิดฉบับ
+        # เงื่อนไขเป็น AND ทั้งสองค่า ต้องตรงพร้อมกันเท่านั้น
+        return db.query(models.Form).filter(
+            models.Form.token == token,
+            models.Form.id == form_id,
+        ).first()
+
+    @staticmethod
     def create(db: Session, form_data: dict):
+        # สร้าง record ขั้นต้นก่อน แล้วค่อย apply field ทั้งชุด
         db_form = models.Form(
             id=form_data["id"],
             token=form_data["token"],
@@ -164,6 +179,7 @@ class FormRepository:
 
     @staticmethod
     def delete(db: Session, form_id: str):
+        # hard delete: ลบแถวออกจากฐานข้อมูลจริง
         db_form = FormRepository.get_by_id(db, form_id)
         if not db_form:
             return False

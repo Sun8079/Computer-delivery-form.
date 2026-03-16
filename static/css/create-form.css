@@ -66,6 +66,15 @@
 .cl-group-label { font-size: 12px; font-weight: 700; color: var(--text2); padding: 6px 0 4px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
 .cl-subitem     { padding-left: 12px; display: grid; grid-template-columns: 22px 1fr 200px; gap: 10px; align-items: center; }
 
+/* ===== SIGNATURE (create-form only) ===== */
+.create-container .sig-wrap {
+  border-width: 2px;
+}
+
+.create-container .sig-canvas {
+  height: 190px;
+}
+
 /* ===== RESPONSIVE (MOBILE) ===== */
 @media (max-width: 768px) {
   .nav {
@@ -83,6 +92,8 @@
   .cl-item    { grid-template-columns: 1fr; }
   .cl-subitem { grid-template-columns: 22px 1fr; }
   .cl-note    { grid-column: 1 / -1; }
+
+  .create-container .sig-canvas { height: 170px; }
 }
 
 @media (max-width: 480px) {

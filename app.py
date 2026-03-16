@@ -18,6 +18,16 @@ from backend.form_templates import route as templates  # template management rou
 from backend.employees import route as employees    # employee directory router
 from backend.utils.bootstrap import run_all          # startup: DB + tables + migrations + seed
 
+
+class NoCacheStaticFiles(StaticFiles):
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        return response
+
 # ---- Startup ทั้งหมดจัดการใน backend/utils/bootstrap/ ----
 run_all(engine, Base)
 
@@ -79,4 +89,4 @@ def create_form_page():
 
 # ---- Serve Static Files (HTML/CSS/JS) ----
 # mount หลังสุด เพื่อไม่ให้ทับ API routes ด้านบน
-app.mount("/", StaticFiles(directory=".", html=True), name="static")
+app.mount("/", NoCacheStaticFiles(directory=".", html=True), name="static")

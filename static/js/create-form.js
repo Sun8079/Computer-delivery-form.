@@ -18,6 +18,13 @@ function getAdminActorLabel() {
   return profile.empCode ? `${profile.fullName} (${profile.empCode})` : profile.fullName;
 }
 
+function getAdminEmpCode() {
+  const profile = (window.Auth && typeof window.Auth.getAdminProfile === 'function')
+    ? window.Auth.getAdminProfile()
+    : { empCode: '' };
+  return (profile.empCode || '').trim();
+}
+
 // ========================= CREATE FORM (Admin Only) =========================
 const AdminCreate = {
   _currentLink: '',
@@ -26,6 +33,69 @@ const AdminCreate = {
   _employeeLookupBound: false,
   _currentTemplate: null,
   _currentUserTestItems: null,
+  _templateLoading: false,
+
+  _setTemplateStatus(text, color = 'var(--text3)') {
+    const el = document.getElementById('c-template-status');
+    if (!el) return;
+    el.textContent = text;
+    el.style.color = color;
+  },
+
+  _setTemplateControlsLocked(locked) {
+    const sel = document.getElementById('c-template');
+    const reloadBtn = document.getElementById('c-template-reload-btn');
+    if (sel) sel.disabled = !!locked;
+    if (reloadBtn) reloadBtn.disabled = !!locked;
+  },
+
+  _buildTemplateFromChecklist(checklist) {
+    if (!Array.isArray(checklist) || !checklist.length) return null;
+
+    const sections = [];
+    const sectionMap = new Map();
+
+    checklist.forEach(c => {
+      const category = c?.category || 'misc';
+      if (!sectionMap.has(category)) {
+        const sec = {
+          category,
+          label: c?.sectionLabel || category,
+          items: [],
+          _groupMap: new Map(),
+        };
+        sectionMap.set(category, sec);
+        sections.push(sec);
+      }
+
+      const sec = sectionMap.get(category);
+      const itemText = String(c?.item || '').trim();
+      if (!itemText) return;
+
+      if (c?.group) {
+        const groupLabel = String(c.group).trim();
+        if (!groupLabel) {
+          sec.items.push(itemText);
+          return;
+        }
+
+        let groupObj = sec._groupMap.get(groupLabel);
+        if (!groupObj) {
+          groupObj = { label: groupLabel, options: [] };
+          sec._groupMap.set(groupLabel, groupObj);
+          sec.items.push(groupObj);
+        }
+        groupObj.options.push(itemText);
+        return;
+      }
+
+      sec.items.push(itemText);
+    });
+
+    return sections
+      .map(({ _groupMap, ...sec }) => sec)
+      .filter(sec => Array.isArray(sec.items) && sec.items.length > 0);
+  },
 
   _getEmployees() {
     if (typeof EMPLOYEES !== 'undefined' && Array.isArray(EMPLOYEES)) {
@@ -170,11 +240,15 @@ const AdminCreate = {
   async loadTemplates() {
     const sel = document.getElementById('c-template');
     if (!sel) return;
+    this._setTemplateStatus('กำลังโหลดรายการ Template...', 'var(--primary)');
     try {
       const r = await fetch('/api/form-templates', {
         headers: { 'Authorization': `Bearer ${Auth.getToken()}` },
       });
-      if (!r.ok) return;
+      if (!r.ok) {
+        this._setTemplateStatus('โหลดรายการ Template ไม่สำเร็จ', 'var(--danger)');
+        return;
+      }
       const templates = await r.json();
       sel.innerHTML = '<option value="">⬛ Default (มาตรฐานระบบ)</option>' +
         templates.map(t =>
@@ -185,7 +259,11 @@ const AdminCreate = {
         localStorage.removeItem('dashboard_select_template');
         sel.value = pendingId;
       }
-      if (sel.value) await this.onTemplateChange();
+      if (sel.value) {
+        await this.onTemplateChange();
+      } else {
+        this._setTemplateStatus('ใช้แบบฟอร์มมาตรฐาน (Default)', 'var(--text3)');
+      }
     } catch (_) { /* ไม่มี template — ใช้ built-in */ }
   },
 
@@ -194,19 +272,52 @@ const AdminCreate = {
     if (!id) {
       this._currentTemplate = null;
       this._currentUserTestItems = null;
+      this._templateLoading = false;
       this.renderChecklist();
+      this._setTemplateStatus('ใช้แบบฟอร์มมาตรฐาน (Default)', 'var(--text3)');
       return;
     }
+    this._templateLoading = true;
+    this._setTemplateStatus('กำลังโหลด Template ที่เลือก...', 'var(--primary)');
     try {
       const r = await fetch(`/api/form-templates/${id}`, {
         headers: { 'Authorization': `Bearer ${Auth.getToken()}` },
       });
-      if (!r.ok) return;
+      if (!r.ok) {
+        this._currentTemplate = null;
+        this._currentUserTestItems = null;
+        this._templateLoading = false;
+        this.renderChecklist();
+        this._setTemplateStatus('โหลด Template ไม่สำเร็จ (Fallback เป็น Default)', 'var(--danger)');
+        alert('โหลด Template ที่เลือกไม่สำเร็จ ระบบจะใช้แบบฟอร์มมาตรฐานแทน');
+        return;
+      }
       const tmpl = await r.json();
       this._currentTemplate = tmpl.sections?.length ? tmpl.sections : null;
       this._currentUserTestItems = tmpl.userTestItems?.length ? tmpl.userTestItems : null;
+      this._templateLoading = false;
       this.renderChecklist();
-    } catch (_) { /* ใช้ default */ }
+      this._setTemplateStatus(`โหลดสำเร็จ: ${tmpl.name || 'Template ที่เลือก'}`, 'var(--success)');
+    } catch (_) {
+      this._currentTemplate = null;
+      this._currentUserTestItems = null;
+      this._templateLoading = false;
+      this.renderChecklist();
+      this._setTemplateStatus('เชื่อมต่อไม่ได้ (Fallback เป็น Default)', 'var(--danger)');
+      alert('ไม่สามารถเชื่อมต่อเพื่อโหลด Template ได้ ระบบจะใช้แบบฟอร์มมาตรฐานแทน');
+    }
+  },
+
+  async _ensureSelectedTemplateReady() {
+    const selectedTemplateId = document.getElementById('c-template')?.value;
+    if (!selectedTemplateId) return true;
+    if (Array.isArray(this._currentTemplate) && this._currentTemplate.length) return true;
+
+    await this.onTemplateChange();
+    if (Array.isArray(this._currentTemplate) && this._currentTemplate.length) return true;
+
+    alert('Template ที่เลือกยังโหลดไม่สำเร็จ กรุณากดโหลดใหม่หรือเลือก Template อีกครั้งก่อนบันทึก');
+    return false;
   },
 
   async reset() {
@@ -225,6 +336,7 @@ const AdminCreate = {
     this._setEditNoteVisibility(false);
     const submitBtn = document.getElementById('btnCreateSubmit');
     if (submitBtn) submitBtn.textContent = '💾 บันทึกและสร้าง Link →';
+    this._setTemplateControlsLocked(false);
     await this.loadTemplates();
     if (!document.getElementById('c-template')?.value) this.renderChecklist();
     SigPad.reinit('sig-admin-create');
@@ -268,6 +380,12 @@ const AdminCreate = {
     document.getElementById('c-note').value   = f.adminNote || '';
     document.getElementById('c-edit-note').value = '';
 
+    // โหมดแก้ไขต้องแสดงรายการเดิมของฟอร์มนั้นเสมอ
+    this._currentTemplate = this._buildTemplateFromChecklist(f.checklist) || this._currentTemplate;
+    this._currentUserTestItems = Array.isArray(f.userTestItems) && f.userTestItems.length
+      ? f.userTestItems
+      : this._currentUserTestItems;
+
     this.renderChecklist();
     const checklist = Array.isArray(f.checklist) ? f.checklist : [];
     checklist.forEach(c => {
@@ -285,6 +403,10 @@ const AdminCreate = {
 
     const submitBtn = document.getElementById('btnCreateSubmit');
     if (submitBtn) submitBtn.textContent = '💾 บันทึกการแก้ไขและส่งกลับ User →';
+
+    // ล็อกการเปลี่ยน template ระหว่างแก้ไข เพื่อไม่ให้โครงสร้างเดิมถูกทับ
+    this._setTemplateControlsLocked(true);
+    this._setTemplateStatus();
 
     SigPad.reinit('sig-admin-create');
   },
@@ -323,6 +445,15 @@ const AdminCreate = {
 
   async submit() {
     this._bindEmployeeLookup();
+
+    if (this._templateLoading) {
+      alert('กำลังโหลด Template อยู่ กรุณารอสักครู่แล้วลองบันทึกอีกครั้ง');
+      return;
+    }
+
+    if (!(await this._ensureSelectedTemplateReady())) {
+      return;
+    }
 
     const codeInput = document.getElementById('c-code');
     if (codeInput) {
@@ -374,6 +505,9 @@ const AdminCreate = {
       form.revision      = (form.revision || 1) + 1;
       form.lastEditNote  = editNote;
       form.lastReturnNote = '';
+      if (!form.adminCreatorEmpCode) {
+        form.adminCreatorEmpCode = getAdminEmpCode();
+      }
       form.checklist = FormModel.readChecklistFromDOM().map(c => ({ ...c, userStatus: null, userNote: '' }));
       form.userSig         = null;
       form.userFilledAt    = null;
@@ -390,7 +524,7 @@ const AdminCreate = {
         return;
       }
 
-      this._currentLink = Utils.getUserPageUrl(form.token);
+      this._currentLink = Utils.getUserPageUrl(form.token, form.id);
       document.getElementById('modalLinkText').textContent = this._currentLink;
       openModal('modalLink');
       this.reset();
@@ -415,6 +549,10 @@ const AdminCreate = {
       adminSig:    SigPad.getData('sig-admin-create') || await AdminCreate._getFileSig('sig-create-file'),
     });
 
+    if (!form.adminCreatorEmpCode) {
+      form.adminCreatorEmpCode = getAdminEmpCode();
+    }
+
     form.checklist = FormModel.readChecklistFromDOM();
     const _defTestItems = ['สามารถ Login เข้าเครื่องได้', 'สามารถใช้งานโปรแกรมพื้นฐานได้', 'สามารถเข้าใช้งาน File sharing ได้', 'อื่นๆ'];
     form.userTestItems = this._currentUserTestItems || _defTestItems;
@@ -425,7 +563,7 @@ const AdminCreate = {
       return;
     }
 
-    this._currentLink = Utils.getUserPageUrl(created.token || form.token);
+    this._currentLink = Utils.getUserPageUrl(created.token || form.token, created.id || form.id);
     document.getElementById('modalLinkText').textContent = this._currentLink;
     openModal('modalLink');
   },
@@ -447,6 +585,9 @@ const AdminCreate = {
     }
   },
 };
+
+// expose ให้โค้ดอื่น/inline handlers อ้างถึงได้แน่นอน
+window.AdminCreate = AdminCreate;
 
 // ========================= BOOTSTRAP =========================
 document.addEventListener('DOMContentLoaded', () => AdminCreate.init());

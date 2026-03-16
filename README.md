@@ -89,6 +89,8 @@ All sessions are stored in the browser's `localStorage`:
 ```
 templates/main.html     - Login page (entry point)
 templates/dashboard.html - Admin dashboard and management
+templates/create-form.html - Create/edit delivery form
+templates/admin.html    - Template manager + employee Excel upload
 templates/user.html     - User form filling interface
 static/js/auth.js       - Authentication & session management
 static/js/config.js     - System configuration and constants
@@ -96,7 +98,11 @@ static/js/models.js     - Data models and structures
 static/js/db.js         - API database layer
 static/js/signature.js  - Digital signature functionality
 static/js/ui.js         - UI utilities and helpers
-static/js/admin.js      - Admin page logic
+static/js/dashboard.js  - Dashboard/history/review modal logic
+static/js/create-form.js - Create/edit form logic
+static/js/template-manager.js - Checklist template CRUD for admin.html
+static/js/admin-employees.js - Employee Excel upload/export for admin.html
+static/js/employees.js  - Employee directory bootstrap data
 static/js/user.js       - User page logic
 static/css/shared.css   - Shared styles
 ```
@@ -147,9 +153,10 @@ All form data is stored in browser's `localStorage`:
 ```
 main.html (Login) 
   ↓
-admin.html (Dashboard)
+dashboard.html (Dashboard)
   ├→ 📊 View Dashboard (statistics)
-  ├→ ➕ Create Form (new form)
+  ├→ ➕ Create Form (create-form.html)
+  ├→ ⚙️ Template Manager (admin.html)
   └→ 📋 View History (all forms)
      └→ Generate token & share link with user
 ```

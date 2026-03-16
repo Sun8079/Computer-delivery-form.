@@ -25,6 +25,7 @@ DDL = [
         last_edit_note    TEXT           DEFAULT NULL,
         last_return_note  TEXT           DEFAULT NULL,
         updated_by        VARCHAR(120)   DEFAULT NULL,
+        createrd_by       VARCHAR(50)    DEFAULT NULL,
         edit_history      JSON           DEFAULT NULL,
 
         emp_name          VARCHAR(200)   DEFAULT NULL,
@@ -75,5 +76,9 @@ COLUMN_MIGRATIONS = [
     (
         "completed_at",
         "ALTER TABLE forms ADD COLUMN completed_at DATETIME DEFAULT NULL",
+    ),
+    (
+        "createrd_by",
+        "ALTER TABLE forms ADD COLUMN createrd_by VARCHAR(50) DEFAULT NULL AFTER updated_by",
     ),
 ]

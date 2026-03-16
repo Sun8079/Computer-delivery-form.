@@ -20,12 +20,12 @@
 //  └─────────────────────────────────────────────────────────┘
 //
 //  Call Flow:
-//    admin.js → AdminCreate.submit()
-//               └→ FormModel.create(adminData)   สร้าง form object
-//               └→ Utils.getUserPageUrl(token)   สร้าง link ส่ง User
-//    admin.js → AdminCreate.renderChecklist()
-//               └→ เสร็จแล้ว user กดบันทึก → readChecklistFromDOM()
-//    ui.js    → Utils.fmtDate(), Utils.fmtDateTime()   แสดงวันที่
+//    create-form.js → AdminCreate.submit()
+//                     └→ FormModel.create(adminData)   สร้าง form object
+//                     └→ Utils.getUserPageUrl(token)   สร้าง link ส่ง User
+//    create-form.js → AdminCreate.renderChecklist()
+//                     └→ เสร็จแล้ว user กดบันทึก → readChecklistFromDOM()
+//    ui.js          → Utils.fmtDate(), Utils.fmtDateTime()   แสดงวันที่
 //
 // ============================================================
 
@@ -47,8 +47,18 @@ const Utils = {
 
   // สร้าง token สุ่ม 10 ตัวอักษร สำหรับ user link
   genToken() {
-    return Math.random().toString(36).substr(2, 10).toUpperCase();
-    // เช่น XK9RN2ABCD — substr(2) ตัด '0.' ผลลัพธ์ที่ Math.random() สร้าง
+    // ใช้ Web Crypto ถ้ามี เพื่อให้ token คาดเดายากและลดโอกาสชน
+    if (window.crypto?.getRandomValues) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const bytes = new Uint8Array(16);
+      window.crypto.getRandomValues(bytes);
+      let out = '';
+      for (let i = 0; i < bytes.length; i += 1) {
+        out += chars[bytes[i] % chars.length];
+      }
+      return out;
+    }
+    return Math.random().toString(36).substr(2, 16).toUpperCase();
   },
 
   // วันนี้ (YYYY-MM-DD) — ใช้เป็น default ของ deliverDate
@@ -84,27 +94,40 @@ const Utils = {
   },
 
   // สร้าง URL สำหรับส่งให้ User เปิดฟอร์ม
-  getUserPageUrl(token) {
+  getUserPageUrl(token, formId = '') {
     // สร้าง URL จาก origin เสมอ — ไม่ขึ้นกับหน้าที่เรียก
-    return `${window.location.origin}/user.html?token=${token}`;
+    // ใส่ทั้ง token + id เพื่อกันกรณี token ซ้ำแล้วเปิดผิดฉบับ
+    const q = new URLSearchParams({ token: String(token || '') });
+    if (formId) q.set('id', String(formId));
+    return `${window.location.origin}/user.html?${q.toString()}`;
   },
 
-  // ชื่อผู้สร้างฟอร์ม (ใช้แสดงแทนรหัสฟอร์มบนหน้าเว็บ)
+  // รหัสผู้สร้างฟอร์ม (ใช้แสดงแทนรหัสฟอร์มบนหน้าเว็บ)
   getFormCreatorName(form) {
     if (!form) return '—';
+
+    // ใช้รหัสที่บันทึกใน DB โดยตรงเป็นลำดับแรก
+    const directCode = String(form.adminCreatorEmpCode || '').trim();
+    if (directCode) return directCode;
+
     const raw = (Array.isArray(form.editHistory) ? form.editHistory[0]?.by : null) || form.updatedBy || '';
-    const currentName = (window.Auth && typeof window.Auth.getAdminProfile === 'function')
-      ? (window.Auth.getAdminProfile().fullName || '')
-      : '';
+    const profile = (window.Auth && typeof window.Auth.getAdminProfile === 'function')
+      ? window.Auth.getAdminProfile()
+      : { empCode: '' };
 
-    // legacy data บางรายการเก็บผู้สร้างเป็น "admin" ให้แสดงชื่อจริงของบัญชีที่ล็อกอินแทน
     const normalized = String(raw).trim();
-    const resolved = /^admin(\s*\(.*\))?$/i.test(normalized)
-      ? (currentName || 'ผู้ดูแลระบบ')
-      : normalized;
 
-    // ถ้ารูปแบบเป็น "ชื่อ (EMPxxx)" ให้แสดงเฉพาะชื่อ
-    return resolved.replace(/\s*\([^)]*\)\s*$/, '') || '—';
+    // รูปแบบข้อมูลใหม่มักเป็น "ชื่อ (ADM1001)" -> ดึงเฉพาะรหัสในวงเล็บ
+    const codeMatch = normalized.match(/\(([^)]+)\)\s*$/);
+    if (codeMatch && codeMatch[1]) return codeMatch[1].trim();
+
+    // ข้อมูลเก่าที่เป็น "admin" ไม่มีรหัสผู้สร้างใน record -> fallback เป็นรหัสของบัญชีที่กำลังล็อกอิน
+    if (/^admin(\s*\(.*\))?$/i.test(normalized)) {
+      return profile.empCode || '—';
+    }
+
+    // กรณีอื่น ๆ คืนค่าตามที่มี (เช่นมีการบันทึกรหัสตรง ๆ)
+    return normalized || '—';
   },
 };
 
@@ -130,6 +153,7 @@ const FormModel = {
       createdAt:   nowISO,
       updatedAt:   nowISO,
       updatedBy:   actorLabel,
+      adminCreatorEmpCode: profile.empCode || '',
       revision:    1,                // นับรอบการแก้ไข (เพิ่มขึ้นทุกครั้งที่ Admin แก้ไข)
       lastEditNote:   adminData.lastEditNote || '',
       lastReturnNote: '',            // ใช้เมื่อ Admin ส่งกลับให้ User แก้ไข
@@ -188,10 +212,16 @@ const FormModel = {
 
   // อ่านค่า checklist จาก DOM (ใช้ใน dashboard.html ตอนสร้างฟอร์ม)
   readChecklistFromDOM() {
-    const sections = (window.AdminCreate?._currentTemplate) || CHECKLIST_TEMPLATE;
+    // ใช้ global binding โดยตรงก่อน เพราะ AdminCreate ถูกประกาศเป็น const
+    // (ไม่การันตีว่าจะอยู่บน window เสมอ)
+    const runtimeAdminCreate = (typeof AdminCreate !== 'undefined') ? AdminCreate : null;
+    // ถ้าเลือก template ไว้ในหน้า create-form ให้ใช้โครงสร้างนั้น;
+    // ถ้าไม่มี (หรือโหลดไม่สำเร็จ) จึง fallback เป็น CHECKLIST_TEMPLATE (default)
+    const sections = runtimeAdminCreate?._currentTemplate || CHECKLIST_TEMPLATE;
     return sections.flatMap(sec =>
       sec.items.flatMap((item, i) => {
         if (typeof item === 'string') {
+          // item แบบ string คือหัวข้อหลัก: ไม่มี checkbox จึงถือว่าเลือกแล้วเสมอ
           const key = `${sec.category}_${i}`;
           return [{
             key,
@@ -204,7 +234,7 @@ const FormModel = {
             userNote:     '',
           }];
         }
-        // item มี options — อ่าน checkbox จาก DOM (sub-options ยังมี checkbox)
+        // item แบบ object มี options: แต่ละ option จะมี checkbox ของตัวเอง
         return item.options.map((opt, oi) => {
           const key = `${sec.category}_${i}_${oi}`;
           return {

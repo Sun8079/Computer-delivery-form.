@@ -50,6 +50,7 @@ class Form(Base):
     last_edit_note   = Column(Text,        nullable=True)
     last_return_note = Column(Text,        nullable=True)
     updated_by       = Column(String(120), nullable=True)
+    createrd_by      = Column(String(50), nullable=True)
     edit_history     = Column(JSON,        nullable=True)
 
     emp_name  = Column(String(200), nullable=True)

@@ -85,7 +85,9 @@
       <select id="c-template" onchange="AdminCreate.onTemplateChange()" style="flex:1;min-width:200px">
         <option value="">⬛ Default (มาตรฐานระบบ)</option>
       </select>
-      <button class="btn btn-outline btn-sm" onclick="AdminCreate.loadTemplates()">🔄 โหลด Template</button>
+      <button id="c-template-reload-btn" class="btn btn-outline btn-sm" onclick="AdminCreate.loadTemplates()">🔄 โหลด Template</button>
+      <!-- สถานะนี้บอกผลการโหลด template แบบ realtime: กำลังโหลด/สำเร็จ/fallback -->
+      <span id="c-template-status" style="font-size:12px;color:var(--text3)">ยังไม่ได้เลือก Template</span>
     </div>
   </div>
 
@@ -156,11 +158,11 @@
 <!-- Scripts -->
 <script src="/static/js/auth.js"></script>
 <script src="/static/js/config.js"></script>
-<script src="/static/js/models.js?v=20260309-3"></script>
+<script src="/static/js/models.js"></script>
 <script src="/static/js/db.js"></script>
 <script src="/static/js/signature.js"></script>
-<script src="/static/js/employees.js?v=20260306-3"></script>
-<script src="/static/js/ui.js?v=20260309-4"></script>
+<script src="/static/js/employees.js"></script>
+<script src="/static/js/ui.js"></script>
 <script src="/static/js/create-form.js"></script>
 </body>
 </html>

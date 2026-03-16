@@ -17,18 +17,18 @@
 //  │                                                         │
 //  │  .getData(canvasId)     อ่านลายเซ็นเป็น base64 PNG     │
 //  │    └→ คืน null ถ้ายังไม่ได้วาด                    │
-//  │    └→ ถูกเรียกโดย admin.js / user.js ค่อน save │
+//  │    └→ ถูกเรียกโดย dashboard.js / create-form.js / user.js ก่อน save │
 //  │                                                         │
 //  │  .reinit(canvasId)      re-init หลัง innerHTML render  │
 //  │    └→ ใช้ใน ReviewModal เพราะ canvas เกิดใหม่   │
 //  └─────────────────────────────────────────────────────────┘
 //
 //  Call Flow:
-//    admin.js → DOMContentLoaded → SigPad.init('sig-admin-create')
-//    user.js  → _renderForm()    → SigPad.init('sig-user')
-//    admin.js → ReviewModal.open()→ SigPad.reinit('sig-admin-final')
-//    admin.js → Adminตรวจยืนยัน  → SigPad.getData('sig-admin-final')
-//    user.js  → UserApp.submit() → SigPad.getData('sig-user')
+//    create-form.js → AdminCreate.reset()    → SigPad.reinit('sig-admin-create')
+//    user.js        → _renderForm()          → SigPad.reinit('sig-user')
+//    dashboard.js   → ReviewModal.open()     → SigPad.reinit('sig-admin-final')
+//    dashboard.js   → ReviewModal._confirm() → SigPad.getData('sig-admin-final')
+//    user.js        → UserApp.submit()       → SigPad.getData('sig-user')
 //
 // ============================================================
 

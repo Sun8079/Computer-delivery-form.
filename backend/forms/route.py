@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from typing import Any, Dict
 from ..utils.db import get_db
 from ..auth.route import get_current_admin
+from ..auth import service as auth_service
 from .service import FormService
 from .repo import form_to_dict
 
@@ -52,6 +53,17 @@ def get_by_token(token: str, db: Session = Depends(get_db)):
     return form_to_dict(f)
 
 
+# ---- GET /api/forms/token/{token}/form/{form_id} — ดึงด้วย token + id (User access) ----
+@router.get("/token/{token}/form/{form_id}")
+def get_by_token_and_id(token: str, form_id: str, db: Session = Depends(get_db)):
+    # ช่วยยืนยันว่า link เปิดมาที่ฟอร์มฉบับที่ถูกต้องจริง
+    # ถ้า token กับ id ไม่ match กันจะตอบ 404 ทันที (ไม่ fallback)
+    f = FormService.get_form_by_token_and_id(db, token, form_id)
+    if not f:
+        raise HTTPException(status_code=404, detail="ไม่พบฟอร์ม")
+    return form_to_dict(f)
+
+
 # ---- GET /api/forms/{id} — ดึงด้วย id (Admin only) ----
 @router.get("/{form_id}")
 def get_by_id(form_id: str, db: Session = Depends(get_db), _=Depends(get_current_admin)):
@@ -63,11 +75,20 @@ def get_by_id(form_id: str, db: Session = Depends(get_db), _=Depends(get_current
 
 # ---- POST /api/forms — สร้างฟอร์มใหม่ (Admin only) ----
 @router.post("", status_code=201)  # 201 Created
-def create(form_data: Dict[str, Any] = Body(...), db: Session = Depends(get_db), _=Depends(get_current_admin)):
+def create(form_data: Dict[str, Any] = Body(...), db: Session = Depends(get_db), current=Depends(get_current_admin)):
     # ตรวจ ID ซ้ำก่อน (กันกรณี double submit)
     # ถ้ามีอยู่แล้วให้ตอบ 400 เพื่อให้ frontend แจ้งผู้ใช้ทันที
     if FormService.get_form_by_id(db, form_data["id"]):
         raise HTTPException(status_code=400, detail="Form ID ซ้ำกัน")
+
+    # กันข้อมูลตกหล่นจาก frontend: ถ้าไม่ส่งรหัสผู้สร้างมา ให้ใช้จาก token ของ admin ที่ล็อกอินอยู่
+    if not form_data.get("adminCreatorEmpCode"):
+        # รองรับ client เก่าที่ไม่ได้ส่งฟิลด์นี้ โดยเติมจากบัญชีที่ล็อกอินแทน
+        creator_emp_code = current.get("emp_code") or ""
+        if not creator_emp_code and current.get("sub"):
+            account = auth_service.find_account(current.get("sub"))
+            creator_emp_code = account.emp_code if account else ""
+        form_data["adminCreatorEmpCode"] = creator_emp_code
 
     f = FormService.create_form(db, form_data)
     return form_to_dict(f)
@@ -81,6 +102,12 @@ def update(form_id: str, form_data: Dict[str, Any] = Body(...), db: Session = De
     # form_id มาจาก path, form_data.id มาจาก body ต้องตรงกัน
     if form_data.get("id") != form_id:
         raise HTTPException(status_code=400, detail="ID ไม่ตรงกัน")
+    # รักษารหัสผู้สร้างเดิมไม่ให้หาย ถ้า client เก่าไม่ได้ส่งฟิลด์นี้
+    if "adminCreatorEmpCode" not in form_data:
+        # ป้องกันข้อมูลผู้สร้างหายเมื่อ client ส่ง payload มาไม่ครบ
+        existing = FormService.get_form_by_id(db, form_id)
+        if existing and getattr(existing, "createrd_by", None):
+            form_data["adminCreatorEmpCode"] = existing.createrd_by
     f = FormService.update_form(db, form_data)
     if not f:
         raise HTTPException(status_code=404, detail="ไม่พบฟอร์ม")
