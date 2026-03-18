@@ -47,6 +47,9 @@ class Form(Base):
 
     status           = Column(String(30),  index=True, default="sent")
     revision         = Column(Integer,     default=1)
+    # ระบุว่า record นี้ใช้ template ไหน (nullable เพื่อรองรับฟอร์มเก่า)
+    template_id      = Column(Integer,     nullable=True)
+    template_name    = Column(String(200), nullable=True)
     last_edit_note   = Column(Text,        nullable=True)
     last_return_note = Column(Text,        nullable=True)
     updated_by       = Column(String(120), nullable=True)

@@ -176,6 +176,8 @@ const UserApp = {
   _renderForm() {
     const f = this.form;
     const checklist = Array.isArray(f?.checklist) ? f.checklist : [];
+    // แยกตาม owner: admin-owned ใช้อ่านอย่างเดียว, user-owned ให้ผู้ใช้กรอก
+    const userOwnedItems = checklist.filter(c => c.sectionOwner === 'user');
 
     document.getElementById('app').innerHTML = `
       <div class="user-wrap">
@@ -228,7 +230,7 @@ const UserApp = {
         ${(() => {
           const checkedItems = checklist.filter(c => c.adminChecked);
           if (!checkedItems.length) return '';
-          // Group dynamically จาก sectionLabel ที่อยู่ใน checklist item (รองรับ custom template)
+
           const catMap = new Map();
           checkedItems.forEach(c => {
             const cat = c.category || '';
@@ -260,6 +262,53 @@ const UserApp = {
                   `).join('')}
                 </div>
               `).join('')}
+            </div>
+          </div>
+          `;
+        })()}
+
+        ${(() => {
+          if (!userOwnedItems.length) return '';
+
+          const secMap = new Map();
+          userOwnedItems.forEach(c => {
+            const cat = c.category || 'user_section';
+            if (!secMap.has(cat)) {
+              secMap.set(cat, { label: c.sectionLabel || cat, items: [] });
+            }
+            secMap.get(cat).items.push(c);
+          });
+
+          const sections = [...secMap.values()];
+          return `
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-header">
+              <span class="card-title">🧩 ส่วนที่ผู้รับต้องกรอก</span>
+              <span style="font-size:11.5px;color:var(--text3)">${userOwnedItems.length} รายการ</span>
+            </div>
+            <div class="card-body">
+              <div class="lock-notice" style="margin-bottom:10px">
+                ✅ รายการส่วนนี้เป็นหน้าที่ของผู้รับมอบโดยตรง และฝั่ง Admin จะไม่กรอกแทน
+              </div>
+              <div style="font-size:12px;color:var(--text3);margin-bottom:10px">
+                วิธีกรอก: ติ๊กเฉพาะรายการที่ต้องการ/ใช้งาน
+              </div>
+              <div class="user-role-checklist">
+              ${sections.map(sec => `
+                <div class="cl-section">
+                  <div class="cl-sect-head">${sec.label}</div>
+                  ${sec.items.map(c => `
+                    <div class="cl-item cl-subitem">
+                      <input type="checkbox" class="cl-check" id="u-check-${c.key}" ${c.userStatus === 'ok' ? 'checked' : ''}>
+                      <label for="u-check-${c.key}" class="cl-item-label">
+                        ${c.item}
+                      </label>
+                      <input type="text" class="cl-note" id="u-note-${c.key}" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)" value="${String(c.userNote || '').replace(/&/g, '&amp;').replace(/\"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}">
+                    </div>
+                  `).join('')}
+                </div>
+              `).join('')}
+              </div>
             </div>
           </div>
           `;
@@ -396,9 +445,30 @@ const UserApp = {
       }
     });
 
+    // สะท้อนค่าที่ผู้ใช้กรอกจาก user-owned sections กลับลง checklist
+    const nextChecklist = Array.isArray(this.form.checklist) ? this.form.checklist.map(item => {
+      if (item.sectionOwner !== 'user') return item;
+      // โหมดแบบภาพตัวอย่าง: checkbox คือ "เลือกใช้งาน" เท่านั้น
+      const isChecked = !!document.getElementById(`u-check-${item.key}`)?.checked;
+      const note = document.getElementById(`u-note-${item.key}`)?.value.trim() || '';
+      return {
+        ...item,
+        userStatus: isChecked ? 'ok' : null,
+        userNote: note,
+      };
+    }) : [];
+
+    const userOwnedTotal = nextChecklist.filter(c => c.sectionOwner === 'user').length;
+    const userOwnedSelected = nextChecklist.filter(c => c.sectionOwner === 'user' && c.userStatus === 'ok').length;
+    if (userOwnedTotal > 0 && userOwnedSelected === 0) {
+      alert('⚠️ กรุณาติ๊กอย่างน้อย 1 รายการในส่วนที่ผู้รับต้องกรอก');
+      return;
+    }
+
     // ======================================================
     //  ⚠ เขียนเฉพาะ field ของ User เท่านั้น
     // ======================================================
+    this.form.checklist      = nextChecklist;
     this.form.userSig        = sig;
     this.form.userFilledAt   = new Date().toISOString();
     this.form.userTestItems  = testItems;

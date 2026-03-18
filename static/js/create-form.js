@@ -31,6 +31,9 @@ const AdminCreate = {
   _editingId: null,
   _loadedForm: null,
   _employeeLookupBound: false,
+  _nameSuggestBound: false,
+  _nameSuggestActiveIndex: -1,
+  _nameSuggestCache: [],
   _currentTemplate: null,
   _currentUserTestItems: null,
   _templateLoading: false,
@@ -61,6 +64,8 @@ const AdminCreate = {
         const sec = {
           category,
           label: c?.sectionLabel || category,
+          // sectionOwner จะติดมากับ checklist item ถ้ามาจาก template ใหม่
+          owner: c?.sectionOwner === 'user' ? 'user' : 'admin',
           items: [],
           _groupMap: new Map(),
         };
@@ -132,6 +137,120 @@ const AdminCreate = {
     if (deptInput) deptInput.value = `${emp.department} (${emp.company})`;
   },
 
+  // -------------------- Name Suggest (autocomplete) --------------------
+  // ทำ dropdown แนะนำรายชื่อใต้ช่อง c-name
+  // เงื่อนไข: จะแสดงเฉพาะชื่อที่ "ขึ้นต้น" ตามตัวอักษรที่พิมพ์
+  _hideNameSuggest() {
+    const box = document.getElementById('c-name-suggest');
+    if (!box) return;
+    box.style.display = 'none';
+    box.innerHTML = '';
+    this._nameSuggestActiveIndex = -1;
+    this._nameSuggestCache = [];
+  },
+
+  _renderNameSuggest(raw) {
+    const box = document.getElementById('c-name-suggest');
+    if (!box) return;
+
+    const q = String(raw || '').trim().toLowerCase();
+    if (!q) {
+      this._hideNameSuggest();
+      return;
+    }
+
+    const employees = this._getEmployees();
+    const matched = employees
+      .filter(emp => String(emp.fullName || '').trim().toLowerCase().startsWith(q))
+      .slice(0, 10);
+
+    if (!matched.length) {
+      this._hideNameSuggest();
+      return;
+    }
+
+    this._nameSuggestCache = matched;
+    this._nameSuggestActiveIndex = -1;
+    box.innerHTML = matched.map((emp, i) => `
+      <div class="emp-suggest-item" data-index="${i}">
+        <span class="emp-suggest-name">${String(emp.fullName || '')}</span>
+        <span class="emp-suggest-code">${String(emp.code || '')}</span>
+      </div>
+    `).join('');
+    box.style.display = 'block';
+
+    box.querySelectorAll('.emp-suggest-item').forEach(el => {
+      // ใช้ mousedown เพื่อให้เลือกค่าได้ก่อน input blur
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const idx = Number(el.getAttribute('data-index') || -1);
+        const emp = this._nameSuggestCache[idx];
+        if (emp) this._fillEmployeeFields(emp);
+        this._hideNameSuggest();
+      });
+    });
+  },
+
+  _paintNameSuggestActive() {
+    const box = document.getElementById('c-name-suggest');
+    if (!box) return;
+    const rows = Array.from(box.querySelectorAll('.emp-suggest-item'));
+    rows.forEach((row, i) => row.classList.toggle('active', i === this._nameSuggestActiveIndex));
+  },
+
+  _bindNameSuggest() {
+    if (this._nameSuggestBound) return;
+
+    const nameInput = document.getElementById('c-name');
+    if (!nameInput) return;
+
+    nameInput.addEventListener('input', () => {
+      // ทุกครั้งที่พิมพ์: อัปเดต dropdown แนะนำรายชื่อ
+      this._renderNameSuggest(nameInput.value);
+    });
+
+    nameInput.addEventListener('keydown', (e) => {
+      const box = document.getElementById('c-name-suggest');
+      const opened = !!box && box.style.display !== 'none';
+      if (!opened) return;
+
+      const size = this._nameSuggestCache.length;
+      if (!size) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        this._nameSuggestActiveIndex = (this._nameSuggestActiveIndex + 1) % size;
+        this._paintNameSuggestActive();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        this._nameSuggestActiveIndex = (this._nameSuggestActiveIndex - 1 + size) % size;
+        this._paintNameSuggestActive();
+      } else if (e.key === 'Enter') {
+        if (this._nameSuggestActiveIndex >= 0) {
+          e.preventDefault();
+          const emp = this._nameSuggestCache[this._nameSuggestActiveIndex];
+          if (emp) this._fillEmployeeFields(emp);
+          this._hideNameSuggest();
+        }
+      } else if (e.key === 'Escape') {
+        this._hideNameSuggest();
+      }
+    });
+
+    nameInput.addEventListener('blur', () => {
+      // delay เล็กน้อยเพื่อไม่ชนกับ mousedown ที่ dropdown
+      setTimeout(() => this._hideNameSuggest(), 120);
+    });
+
+    document.addEventListener('click', (e) => {
+      const wrap = document.querySelector('.emp-name-autocomplete');
+      if (!wrap || wrap.contains(e.target)) return;
+      this._hideNameSuggest();
+    });
+
+    this._nameSuggestBound = true;
+  },
+
   _bindEmployeeLookup() {
     if (this._employeeLookupBound) return;
 
@@ -198,6 +317,9 @@ const AdminCreate = {
     nameInput.addEventListener('change', () => applyByName(true));
     nameInput.addEventListener('blur',   () => applyByName(true));
 
+    // ผูกระบบแนะนำรายชื่อหลังจากมี input พร้อมใช้งาน
+    this._bindNameSuggest();
+
     this._employeeLookupBound = true;
   },
 
@@ -206,14 +328,19 @@ const AdminCreate = {
     document.getElementById('adminChecklist').innerHTML =
       sections.map(sec => `
         <div class="cl-section">
-          <div class="cl-sect-head">${sec.label}</div>
+          <div class="cl-sect-head">${sec.label}
+            <span style="margin-left:8px;font-size:11px;color:var(--text3)">
+              ${sec.owner === 'user' ? 'ผู้รับผิดชอบ: User' : 'ผู้รับผิดชอบ: Admin'}
+            </span>
+          </div>
           ${sec.items.map((item, i) => {
+            const secIsUser = sec.owner === 'user';
             if (typeof item === 'string') {
               const k = `${sec.category}_${i}`;
               return `
                 <div class="cl-item">
                   <span class="cl-item-label">${item}</span>
-                  <input type="text" class="cl-note" id="note_${k}" placeholder="ผลตรวจ ">
+                  <input type="text" class="cl-note" id="note_${k}" placeholder="${secIsUser ? 'ส่วนนี้ให้ User กรอกในลิงก์รับมอบ' : 'ผลตรวจ'}" ${secIsUser ? 'disabled' : ''}>
                 </div>
               `;
             }
@@ -224,9 +351,9 @@ const AdminCreate = {
                   const k = `${sec.category}_${i}_${oi}`;
                   return `
                     <div class="cl-item cl-subitem">
-                      <input type="checkbox" class="cl-check" id="chk_${k}" data-key="${k}">
+                      <input type="checkbox" class="cl-check" id="chk_${k}" data-key="${k}" ${secIsUser ? 'disabled' : ''}>
                       <label for="chk_${k}" class="cl-item-label">${opt}</label>
-                      <input type="text" class="cl-note" id="note_${k}" placeholder="ผลตรวจ ">
+                      <input type="text" class="cl-note" id="note_${k}" placeholder="${secIsUser ? 'ส่วนนี้ให้ User กรอกในลิงก์รับมอบ' : 'ผลตรวจ'}" ${secIsUser ? 'disabled' : ''}>
                     </div>
                   `;
                 }).join('')}
@@ -476,6 +603,11 @@ const AdminCreate = {
     }
 
     const editNote = document.getElementById('c-edit-note').value.trim();
+    const templateSel = document.getElementById('c-template');
+    const selectedTemplateId = templateSel?.value ? Number(templateSel.value) : null;
+    const selectedTemplateName = selectedTemplateId
+      ? (templateSel?.selectedOptions?.[0]?.textContent || '').replace(' ⭐', '').trim()
+      : 'Default (มาตรฐานระบบ)';
 
     // ---- โหมดแก้ไขฟอร์มที่มีอยู่ ----
     if (this._editingId && !editNote) {
@@ -505,6 +637,9 @@ const AdminCreate = {
       form.revision      = (form.revision || 1) + 1;
       form.lastEditNote  = editNote;
       form.lastReturnNote = '';
+      // เก็บร่องรอยว่า record นี้ใช้ template ใด เพื่อรายงานในหน้า dashboard/history
+      form.templateId = selectedTemplateId;
+      form.templateName = selectedTemplateName;
       if (!form.adminCreatorEmpCode) {
         form.adminCreatorEmpCode = getAdminEmpCode();
       }
@@ -552,6 +687,10 @@ const AdminCreate = {
     if (!form.adminCreatorEmpCode) {
       form.adminCreatorEmpCode = getAdminEmpCode();
     }
+
+    // ส่ง template metadata ไป backend ให้บันทึกลงคอลัมน์ template_id/template_name
+    form.templateId = selectedTemplateId;
+    form.templateName = selectedTemplateName;
 
     form.checklist = FormModel.readChecklistFromDOM();
     const _defTestItems = ['สามารถ Login เข้าเครื่องได้', 'สามารถใช้งานโปรแกรมพื้นฐานได้', 'สามารถเข้าใช้งาน File sharing ได้', 'อื่นๆ'];

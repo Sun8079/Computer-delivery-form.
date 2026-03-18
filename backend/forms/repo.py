@@ -29,6 +29,9 @@ def form_to_dict(db_form) -> dict:
         "token":           db_form.token,
         "status":          db_form.status,
         "revision":        db_form.revision or 1,
+        # ส่ง template metadata กลับไปให้ frontend ใช้แสดงในตาราง
+        "templateId":      db_form.template_id,
+        "templateName":    db_form.template_name or "",
         "lastEditNote":    db_form.last_edit_note or "",
         "lastReturnNote":  db_form.last_return_note or "",
         "updatedBy":       db_form.updated_by or "",
@@ -79,6 +82,8 @@ def _apply_form_data(db_form, form_data: dict, partial: bool = False):
 
     _set("status",          "status",           "sent")
     _set("revision",        "revision",         1)
+    _set("templateId",      "template_id",      None)
+    _set("templateName",    "template_name",    "")
     _set("lastEditNote",    "last_edit_note",    "")
     _set("lastReturnNote",  "last_return_note",  "")
     _set("updatedBy",       "updated_by",        "")

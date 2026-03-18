@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS forms (
   -- สถานะและ revision
   status            VARCHAR(30)    NOT NULL DEFAULT 'sent',
   revision          INT            NOT NULL DEFAULT 1,
+  template_id       INT            DEFAULT NULL,
+  template_name     VARCHAR(200)   DEFAULT NULL,
   last_edit_note    TEXT           DEFAULT NULL,
   updated_by        VARCHAR(120)   DEFAULT NULL,
   edit_history      JSON           DEFAULT NULL,  -- list of {at, by, action, note}

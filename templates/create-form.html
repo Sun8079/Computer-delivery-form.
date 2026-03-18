@@ -38,7 +38,10 @@
       <div class="form-grid">
         <div class="form-group">
           <label>ชื่อ-นามสกุล <span class="req">*</span></label>
-          <input type="text" id="c-name" list="employeeNameList" placeholder="พิมพ์ชื่อหรือเลือกจากรายการ">
+          <div class="emp-name-autocomplete">
+            <input type="text" id="c-name" list="employeeNameList" placeholder="พิมพ์ชื่อหรือเลือกจากรายการ">
+            <div id="c-name-suggest" class="emp-suggest" style="display:none"></div>
+          </div>
           <small id="c-name-hint" style="display:none;color:#dc2626;font-size:12px;margin-top:3px"></small>
         </div>
         <div class="form-group">

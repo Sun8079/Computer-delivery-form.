@@ -108,6 +108,10 @@
   .user-cl-item { gap: 8px; padding: 9px 0; }
   .cl-item-name { font-size: 13.5px; }
 
+  .user-role-checklist .cl-item { grid-template-columns: 1fr; }
+  .user-role-checklist .cl-subitem { grid-template-columns: 22px 1fr; padding-left: 6px; }
+  .user-role-checklist .cl-note { grid-column: 1 / -1; }
+
   /* Response buttons: full width */
   .resp-btns { flex-direction: column; }
   .resp-btn  { width: 100%; text-align: center; }

@@ -22,6 +22,9 @@ DDL = [
 
         status            VARCHAR(30)    NOT NULL DEFAULT 'sent',
         revision          INT            NOT NULL DEFAULT 1,
+        -- เก็บ template ที่ใช้ตอนสร้างฟอร์ม เพื่อแสดงย้อนหลังใน dashboard/history
+        template_id       INT            DEFAULT NULL,
+        template_name     VARCHAR(200)   DEFAULT NULL,
         last_edit_note    TEXT           DEFAULT NULL,
         last_return_note  TEXT           DEFAULT NULL,
         updated_by        VARCHAR(120)   DEFAULT NULL,
@@ -69,6 +72,14 @@ DDL = [
 
 # ⚠ ถ้าเพิ่มคอลัมน์ใหม่ → ต้องเพิ่มทั้งใน DDL (บนนั้น) และ COLUMN_MIGRATIONS (ที่นี่)
 COLUMN_MIGRATIONS = [
+    (
+        "template_id",
+        "ALTER TABLE forms ADD COLUMN template_id INT DEFAULT NULL AFTER revision",
+    ),
+    (
+        "template_name",
+        "ALTER TABLE forms ADD COLUMN template_name VARCHAR(200) DEFAULT NULL AFTER template_id",
+    ),
     (
         "last_return_note",
         "ALTER TABLE forms ADD COLUMN last_return_note TEXT DEFAULT NULL AFTER last_edit_note",

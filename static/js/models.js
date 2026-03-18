@@ -223,13 +223,17 @@ const FormModel = {
         if (typeof item === 'string') {
           // item แบบ string คือหัวข้อหลัก: ไม่มี checkbox จึงถือว่าเลือกแล้วเสมอ
           const key = `${sec.category}_${i}`;
+          const isUserOwned = sec.owner === 'user';
           return [{
             key,
             category:     sec.category,
             sectionLabel: sec.label,
+            // ระบุ owner ลงแต่ละ item เพื่อให้หน้าอื่นรู้บริบทจาก template เดิม
+            sectionOwner: sec.owner === 'user' ? 'user' : 'admin',
             item,
-            adminChecked: true,  // หัวข้อหลักไม่มี checkbox — ถือว่าผ่านเสมอ
-            adminNote:    document.getElementById(`note_${key}`)?.value.trim() || '',
+            // ถ้า owner เป็น user ให้ถือว่ายังไม่ผ่านฝั่ง admin และรอ user กรอกต่อ
+            adminChecked: !isUserOwned,
+            adminNote:    isUserOwned ? '' : (document.getElementById(`note_${key}`)?.value.trim() || ''),
             userStatus:   null,
             userNote:     '',
           }];
@@ -237,14 +241,17 @@ const FormModel = {
         // item แบบ object มี options: แต่ละ option จะมี checkbox ของตัวเอง
         return item.options.map((opt, oi) => {
           const key = `${sec.category}_${i}_${oi}`;
+          const isUserOwned = sec.owner === 'user';
           return {
             key,
             category:     sec.category,
             sectionLabel: sec.label,
+            sectionOwner: sec.owner === 'user' ? 'user' : 'admin',
             item:         opt,
             group:        item.label,
-            adminChecked: document.getElementById(`chk_${key}`)?.checked || false,
-            adminNote:    document.getElementById(`note_${key}`)?.value.trim() || '',
+            // user-owned section: admin ไม่มีสิทธิ์ติ๊กผ่านหรือให้ผลตรวจในขั้นนี้
+            adminChecked: isUserOwned ? false : (document.getElementById(`chk_${key}`)?.checked || false),
+            adminNote:    isUserOwned ? '' : (document.getElementById(`note_${key}`)?.value.trim() || ''),
             userStatus:   null,
             userNote:     '',
           };

@@ -79,14 +79,14 @@
   <div class="card" style="margin-bottom:14px">
     <div class="card-header">
       <span class="card-title">📋 โหลด Template ที่บันทึกไว้</span>
-      <span style="font-size:12px;color:var(--text3)">เลือกแล้วกด "โหลด" เพื่อนำมาแก้ไข</span>
+      <button class="btn btn-outline btn-sm" onclick="TM.deleteTemplate()">🗑️ ลบ Template</button>
+      <button class="btn btn-ghost btn-sm" onclick="TM.refreshList()">🔄 รีเฟรส</button>
     </div>
     <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:12px 16px">
-      <select id="srcTemplate" style="flex:1;min-width:220px">
+      <select id="srcTemplate" style="flex:1;min-width:220px" onchange="TM.loadIntoEditor()">
         <option value="">⬛ Built-in (มาตรฐานระบบ)</option>
       </select>
-      <button class="btn btn-outline btn-sm" onclick="TM.loadIntoEditor()">⬇️ โหลดลง Editor</button>
-      <button class="btn btn-ghost btn-sm" onclick="TM.refreshList()">🔄 รีเฟรส</button>
+      
     </div>
   </div>
 

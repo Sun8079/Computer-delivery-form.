@@ -17,7 +17,7 @@
   </div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="Page.show('dashboard')">📊 Dashboard</button>
-    <button class="nav-tab"        onclick="Page.show('history')">📋 ประวัติ</button>
+    <!-- <button class="nav-tab"        onclick="Page.show('history')">📋 ประวัติ</button> -->
     <button class="nav-tab"        onclick="window.location.href='admin.html'">⚙️ Template</button>
   </div>
   <button class="btn btn-nav-create" onclick="window.location.href='create-form.html'">➕ สร้างฟอร์ม</button>
@@ -33,51 +33,36 @@
     <div class="page-title">Dashboard <small>ภาพรวมระบบส่งมอบครุภัณฑ์ IT</small></div>
     <button class="btn btn-primary" onclick="window.location.href='create-form.html'">➕ สร้างฟอร์มใหม่</button>
   </div>
+
   <div class="stats-grid" id="statsGrid"></div>
+
   <div class="card">
     <div class="card-header">
       <span class="card-title">ฟอร์มล่าสุด</span>
-      <button class="btn btn-outline btn-sm" onclick="Page.show('history')">ดูทั้งหมด →</button>
+      <div class="search-bar" style="margin:0;min-width:420px;flex:1;justify-content:flex-end">
+        <div class="search-autocomplete">
+          <input type="text" id="hSearch" placeholder="🔍 ค้นหา ชื่อ / รหัสพนักงาน / รหัสครุภัณฑ์..." oninput="SearchSuggest.onInput(event)">
+          <div id="hSuggest" class="search-suggest" style="display:none"></div>
+        </div>
+        <select id="hStatus" onchange="SearchSuggest.onStatusChange()">
+          <option value="">ทุกสถานะ</option>
+          <option value="sent">รอ User กรอก</option>
+          <option value="user_filled">รอ Admin ยืนยัน</option>
+          <option value="completed">เสร็จสิ้น</option>
+        </select>
+      </div>
     </div>
-    <div class="table-wrap"><table>
-      <thead><tr>
+    <div class="table-wrap">
+      <table>
+      <thead>
+        <tr>
         <th>ผู้สร้างฟอร์ม</th><th>พนักงาน</th><th>รหัสพนักงาน</th>
-        <th>แผนก</th><th>ครุภัณฑ์</th><th>สถานะ</th><th>วันที่</th><th>Actions</th>
-      </tr></thead>
+        <th>แผนก</th><th>ครุภัณฑ์</th><th>แบบฟอร์ม</th><th>สถานะ</th><th>วันที่</th><th>Actions</th>
+      </tr>
+    </thead>
       <tbody id="dashTable"></tbody>
-    </table></div>
+    </table>
   </div>
-</div>
-
-<!-- HISTORY -->
-<div id="page-history" class="page">
-  <div class="page-header">
-    <div class="page-title">ประวัติฟอร์มทั้งหมด <small>ค้นหา / กรอง / ดูประวัติย้อนหลัง</small></div>
-  </div>
-  <div class="search-bar">
-    <input type="text" id="hSearch" placeholder="🔍 ค้นหา ชื่อ / รหัสพนักงาน / รหัสครุภัณฑ์..." oninput="History.render()">
-    <select id="hStatus" onchange="History.render()">
-      <option value="">ทุกสถานะ</option>
-      <option value="sent">รอ User กรอก</option>
-      <option value="user_filled">รอ Admin ยืนยัน</option>
-      <option value="completed">เสร็จสิ้น</option>
-    </select>
-  </div>
-  <div class="card">
-    <div class="table-wrap"><table>
-      <thead><tr>
-        <th>ผู้สร้างฟอร์ม</th>
-        <th>พนักงาน</th>
-        <th>รหัสพนักงาน</th>
-        <th>แผนก</th>
-        <th>ครุภัณฑ์</th>
-        <th>สถานะ</th>
-        <th>วันสร้าง</th>
-        <th>วันเสร็จ</th>
-        <th>Actions</th>
-      </tr></thead>
-      <tbody id="histTable"></tbody>
-    </table></div>
   </div>
 </div>
 

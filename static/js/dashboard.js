@@ -3,8 +3,8 @@
 // ============================================================
 //  โหลดใน: dashboard.html เท่านั้น
 //
-//  Page.show()     — สลับระหว่าง dashboard / history
-//  Dashboard       — โหลด stats + ฟอร์มล่าสุด
+//  Page.show()     — คงไว้สำหรับ nav (ตอนนี้ใช้หน้า dashboard เดียว)
+//  Dashboard       — โหลด stats + ฟอร์มล่าสุด + ส่วนประวัติ
 //  History         — ค้นหา/กรองประวัติฟอร์มทั้งหมด
 //  AdminCreate     — stub: editExisting(redirect) + copyExistingLink
 //  ViewModal       — ดูรายละเอียดฟอร์ม
@@ -18,9 +18,202 @@ function getAdminActorLabel() {
   return profile.empCode ? `${profile.fullName} (${profile.empCode})` : profile.fullName;
 }
 
+function renderTemplateCell(f) {
+  // ถ้าเป็นฟอร์มเก่าที่ยังไม่มี metadata ให้แสดงเป็น DEFAULT
+  const code = f.templateId ? `TMP-${f.templateId}` : 'DEFAULT';
+  const name = f.templateName || 'Default (มาตรฐานระบบ)';
+  return `<span class="mono">${code}</span><br><small class="text-muted">${name}</small>`;
+}
+
+// ========================= SEARCH SUGGEST =========================
+// ชุดนี้ดูแล autocomplete ของช่องค้นหา:
+// - พิมพ์แล้วโชว์คำแนะนำแบบเรียลไทม์
+// - รองรับขึ้น/ลง/Enter/Esc
+// - เลือกคำแนะนำแล้วกรองตารางทันที
+const SearchSuggest = {
+  _items: [],
+  _activeIndex: -1,
+  _isComposing: false,
+
+  async refreshSource() {
+    // โหลดข้อมูลล่าสุดทุกครั้งที่ต้องรีเฟรชแหล่งคำค้น
+    // เพื่อให้รายการแนะนำสอดคล้องกับข้อมูลในตารางจริง
+    const all = await DB.getAll();
+    const set = new Set();
+
+    // เก็บคำจากหลายฟิลด์เพื่อให้ค้นหาได้ใกล้เคียงการใช้งานจริง
+    all.forEach(f => {
+      [f.empName, f.empCode, f.assetCode].forEach(v => {
+        const text = String(v || '').trim();
+        if (text) set.add(text);
+      });
+    });
+
+    this._items = Array.from(set);
+  },
+
+  _rank(query, text) {
+    const q = query.toLowerCase();
+    const t = text.toLowerCase();
+    // กติกา: ผ่านเฉพาะคำที่ขึ้นต้นตรงกับสิ่งที่พิมพ์
+    if (t.startsWith(q)) return 0; // รองรับเฉพาะ "ขึ้นต้นคำ" เท่านั้น
+    return Number.POSITIVE_INFINITY;
+  },
+
+  _escapeHtml(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  },
+
+  _highlight(text, query) {
+    const safe = this._escapeHtml(text);
+    if (!query) return safe;
+    const idx = text.toLowerCase().indexOf(query.toLowerCase());
+    if (idx < 0) return safe;
+
+    const a = this._escapeHtml(text.slice(0, idx));
+    const b = this._escapeHtml(text.slice(idx, idx + query.length));
+    const c = this._escapeHtml(text.slice(idx + query.length));
+    return `${a}<mark>${b}</mark>${c}`;
+  },
+
+  _getSuggestEl() {
+    return document.getElementById('hSuggest');
+  },
+
+  _hide() {
+    const box = this._getSuggestEl();
+    if (!box) return;
+    box.style.display = 'none';
+    box.innerHTML = '';
+    this._activeIndex = -1;
+  },
+
+  async onInput(evt) {
+    // กรองตารางก่อนทุกครั้ง เพื่อให้ผลลัพธ์แสดงทันทีตอนพิมพ์
+    await History.render();
+
+    // IME ภาษาไทย: ระหว่างกำลังประกอบคำยังไม่ต้องโชว์ dropdown
+    if (evt?.isComposing || this._isComposing) return;
+
+    const input = document.getElementById('hSearch');
+    const q = input?.value.trim() || '';
+    if (!q) {
+      this._hide();
+      return;
+    }
+
+    if (!this._items.length) {
+      await this.refreshSource();
+    }
+
+    const ranked = this._items
+      .map(text => ({ text, score: this._rank(q, text) }))
+      .filter(x => Number.isFinite(x.score))
+      // ถ้าคะแนนเท่ากัน เรียงตามภาษาไทยเพื่อให้รายการนิ่งและเดาง่าย
+      .sort((a, b) => (a.score - b.score) || a.text.localeCompare(b.text, 'th'))
+      .slice(0, 10);
+
+    const box = this._getSuggestEl();
+    if (!box || !ranked.length) {
+      this._hide();
+      return;
+    }
+
+    box.innerHTML = ranked.map((r, i) => `
+      <div class="search-suggest-item${i === this._activeIndex ? ' active' : ''}" data-index="${i}" data-value="${encodeURIComponent(r.text)}">
+        <span class="search-suggest-icon">🔍</span>
+        <span>${this._highlight(r.text, q)}</span>
+      </div>
+    `).join('');
+    box.style.display = 'block';
+
+    box.querySelectorAll('.search-suggest-item').forEach(el => {
+      // mousedown ทำงานก่อน blur เพื่อป้องกัน dropdown หายก่อนเลือกค่า
+      el.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const value = decodeURIComponent(el.getAttribute('data-value') || '');
+        this._applyValue(value);
+      });
+    });
+  },
+
+  async onStatusChange() {
+    await History.render();
+    this._hide();
+  },
+
+  async onKeyDown(evt) {
+    const box = this._getSuggestEl();
+    const open = !!box && box.style.display !== 'none';
+    if (!open) return;
+
+    const items = Array.from(box.querySelectorAll('.search-suggest-item'));
+    if (!items.length) return;
+
+    if (evt.key === 'ArrowDown') {
+      evt.preventDefault();
+      this._activeIndex = (this._activeIndex + 1) % items.length;
+      this._paintActive(items);
+      return;
+    }
+    if (evt.key === 'ArrowUp') {
+      evt.preventDefault();
+      this._activeIndex = (this._activeIndex - 1 + items.length) % items.length;
+      this._paintActive(items);
+      return;
+    }
+    if (evt.key === 'Enter') {
+      evt.preventDefault();
+      const idx = this._activeIndex >= 0 ? this._activeIndex : 0;
+      const value = decodeURIComponent(items[idx]?.getAttribute('data-value') || '');
+      this._applyValue(value);
+      return;
+    }
+    if (evt.key === 'Escape') {
+      this._hide();
+    }
+  },
+
+  _paintActive(items) {
+    items.forEach((el, i) => el.classList.toggle('active', i === this._activeIndex));
+  },
+
+  async _applyValue(value) {
+    // เมื่อผู้ใช้เลือกคำแนะนำ: ใส่ค่าใน input แล้วกรองตารางซ้ำทันที
+    const input = document.getElementById('hSearch');
+    if (input) input.value = value;
+    this._hide();
+    await History.render();
+  },
+
+  bindEvents() {
+    const input = document.getElementById('hSearch');
+    if (!input) return;
+
+    input.addEventListener('keydown', (e) => this.onKeyDown(e));
+    input.addEventListener('compositionstart', () => {
+      this._isComposing = true;
+    });
+    input.addEventListener('compositionend', async () => {
+      this._isComposing = false;
+      await this.onInput();
+    });
+
+    document.addEventListener('click', (e) => {
+      const wrap = document.querySelector('.search-autocomplete');
+      if (!wrap || wrap.contains(e.target)) return;
+      this._hide();
+    });
+  },
+};
+
 // ========================= PAGE NAVIGATION =========================
 const Page = {
-  _tabs: ['dashboard', 'history'],
+  _tabs: ['dashboard'],
 
   async show(name) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -29,14 +222,15 @@ const Page = {
     });
     document.getElementById(`page-${name}`)?.classList.add('active');
 
+    // หน้าเดียว: ทุกอย่าง render ผ่าน Dashboard.render()
     if (name === 'dashboard') await Dashboard.render();
-    if (name === 'history')   await History.render();
   },
 };
 
 // ========================= DASHBOARD =========================
 const Dashboard = {
   async render() {
+    // render หน้า dashboard เป็นสองช่วง: สถิติ -> ตารางข้อมูล
     await this._renderStats();
     await this._renderTable();
   },
@@ -58,10 +252,26 @@ const Dashboard = {
   },
 
   async _renderTable() {
+    // ใช้ช่องค้นหา/กรองเดียวกันบน dashboard
+    // โหมดค้นหา: ต้อง "ขึ้นต้นด้วยคำที่พิมพ์" เท่านั้น เช่น ก -> กร -> กรุ
+    const q  = document.getElementById('hSearch')?.value.toLowerCase().trim() || '';
+    const st = document.getElementById('hStatus')?.value || '';
+
     const tbody = document.getElementById('dashTable');
-    const forms = (await DB.getAll()).slice(0, 10);
+    const all = await DB.getAll();
+    const forms = all.filter(f => {
+      // ตรวจ prefix match หลายฟิลด์: ชื่อ, รหัสพนักงาน, รหัสครุภัณฑ์, id ฟอร์ม
+      const match = !q || [f.empName, f.empCode, f.assetCode, f.id]
+        .some(v => String(v || '').toLowerCase().startsWith(q));
+      return match && (!st || f.status === st);
+    });
+
     if (!forms.length) {
-      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">📭</div><p>ยังไม่มีฟอร์ม</p></div></td></tr>`;
+      const msg = (q || st)
+        ? 'ไม่พบฟอร์มที่ค้นหา'
+        : 'ยังไม่มีฟอร์ม';
+      const icon = (q || st) ? '🔍' : '📭';
+      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="icon">${icon}</div><p>${msg}</p></div></td></tr>`;
       return;
     }
     tbody.innerHTML = forms.map(f => `
@@ -71,6 +281,7 @@ const Dashboard = {
         <td><span class="mono">${f.empCode}</span></td>
         <td>${f.empDept || '—'}</td>
         <td>${f.assetCode}<br><small class="text-muted">${f.assetModel || ''}</small></td>
+        <td>${renderTemplateCell(f)}</td>
         <td>${renderBadge(f.status)}</td>
         <td style="white-space:nowrap">${Utils.fmtDate(f.createdAt)}</td>
         <td>${this._actionBtns(f)}</td>
@@ -99,33 +310,10 @@ const Dashboard = {
 // ========================= HISTORY =========================
 const History = {
   async render() {
-    const q  = document.getElementById('hSearch')?.value.toLowerCase() || '';
-    const st = document.getElementById('hStatus')?.value || '';
-    const all = await DB.getAll();
-    const filtered = all.filter(f => {
-      const match = !q || [f.empName, f.empCode, f.assetCode, f.id]
-        .some(v => v?.toLowerCase().includes(q));
-      return match && (!st || f.status === st);
-    });
-
-    const tbody = document.getElementById('histTable');
-    if (!filtered.length) {
-      tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="icon">🔍</div><p>ไม่พบฟอร์มที่ค้นหา</p></div></td></tr>`;
-      return;
-    }
-    tbody.innerHTML = filtered.map(f => `
-      <tr>
-        <td><span class="mono" style="color:var(--primary-lt)">${Utils.getFormCreatorName(f)}</span></td>
-        <td><b>${f.empName}</b></td>
-        <td><span class="mono">${f.empCode}</span></td>
-        <td>${f.empDept || '—'}</td>
-        <td>${f.assetCode}<br><small class="text-muted">${f.assetModel || ''}</small></td>
-        <td>${renderBadge(f.status)}</td>
-        <td style="white-space:nowrap">${Utils.fmtDate(f.createdAt)}</td>
-        <td style="white-space:nowrap">${Utils.fmtDate(f.completedAt)}</td>
-        <td>${Dashboard._actionBtns(f)}</td>
-      </tr>
-    `).join('');
+    // compatibility layer:
+    // ยังคงชื่อ History.render() ไว้ เพื่อไม่ต้องไล่แก้ inline handlers เดิมใน HTML
+    // แต่ภายในจะเรียก table renderer ตัวเดียวของ dashboard
+    await Dashboard._renderTable();
   },
 };
 
@@ -157,7 +345,7 @@ const AdminCreate = {
       return;
     }
 
-    await Promise.all([Dashboard.render(), History.render()]);
+    await Dashboard.render();
     alert('🗑 ลบฟอร์มเรียบร้อยแล้ว');
   },
 };
@@ -253,7 +441,7 @@ const ReviewModal = {
     if (!ok) { alert('❌ ส่งกลับให้ User ไม่สำเร็จ'); return; }
 
     closeModal('modalReview');
-    await Promise.all([Dashboard.render(), History.render()]);
+    await Dashboard.render();
     alert('↩ ส่งกลับให้ User แก้ไขแล้ว');
   },
 
@@ -281,7 +469,7 @@ const ReviewModal = {
     });
 
     closeModal('modalReview');
-    await Promise.all([Dashboard.render(), History.render()]);
+    await Dashboard.render();
     alert('✅ ยืนยันเรียบร้อย! ฟอร์มปิดแล้ว');
   },
 };
@@ -289,5 +477,7 @@ const ReviewModal = {
 // ========================= INIT =========================
 document.addEventListener('DOMContentLoaded', async () => {
   initModalOverlays();
+  SearchSuggest.bindEvents();
   await Dashboard.render();
+  await SearchSuggest.refreshSource();
 });

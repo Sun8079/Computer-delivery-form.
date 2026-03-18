@@ -5,13 +5,14 @@
 //  ใช้ใน admin.html
 //  โฟลว์:
 //    1. โหลดรายการ template จาก /api/form-templates → เติม dropdown
-//    2. ผู้ใช้เลือก template แล้วกด "โหลดลง Editor"
+//    2. ผู้ใช้เลือก template ใน dropdown แล้วโหลดลง Editor อัตโนมัติ
 //       → แสดง sections/items ที่แก้ไขได้
 //       หรือถ้าเลือก "Built-in" → โหลด CHECKLIST_TEMPLATE จาก config.js
+//       พร้อมกำหนด owner ของแต่ละ section ได้ว่าเป็นงานของ Admin หรือ User
 //    3. ผู้ใช้แก้ไข Section label และรายการตรวจสอบ
 //    4. กด "เซฟเป็น Template ใหม่" → POST /api/form-templates (สร้างใหม่เสมอ)
 //       ไม่เคย PUT — ไม่ทับ template เดิม
-//
+// 
 // ============================================================
 
 // รายการ default สำหรับ user test (ใช้เมื่อยังไม่มี template)
@@ -83,6 +84,56 @@ const TM = {
     }
   },
 
+  // -------------------- เปิดหน้าสร้างฟอร์มพร้อม template ที่เลือก --------------------
+  openCreateWithSelected() {
+    const id = document.getElementById('srcTemplate')?.value || '';
+    if (id) {
+      // create-form.js จะอ่านค่านี้ตอน loadTemplates แล้วเลือกให้เอง
+      localStorage.setItem('dashboard_select_template', String(id));
+    } else {
+      // ถ้าเลือก Built-in ให้ล้างค่าเดิม เพื่อไม่ให้ติด template เก่า
+      localStorage.removeItem('dashboard_select_template');
+    }
+    window.location.href = 'create-form.html';
+  },
+
+  // -------------------- ลบ template ที่เลือก --------------------
+  async deleteTemplate() {
+    const sel = document.getElementById('srcTemplate');
+    const id = sel?.value || '';
+    if (!id) {
+      alert('กรุณาเลือก Template ที่ต้องการลบก่อน');
+      return;
+    }
+
+    const name = sel?.options?.[sel.selectedIndex]?.text || `ID ${id}`;
+    const ok = window.confirm(`ยืนยันการลบ Template: ${name} ?`);
+    if (!ok) return;
+
+    try {
+      const r = await fetch(`${this._API}/${id}`, {
+        method: 'DELETE',
+        headers: this._h(),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        alert('ลบไม่สำเร็จ: ' + (err.detail || r.status));
+        return;
+      }
+
+      // ถ้าลบ template ที่เคยถูกเลือกไว้ใน dashboard ให้ล้างทิ้ง
+      if (localStorage.getItem('dashboard_select_template') === String(id)) {
+        localStorage.removeItem('dashboard_select_template');
+      }
+
+      await this.refreshList();
+      this.resetEditor();
+      alert('ลบ Template เรียบร้อยแล้ว');
+    } catch (e) {
+      alert('เกิดข้อผิดพลาด: ' + e.message);
+    }
+  },
+
   // -------------------- Reset editor กลับ built-in --------------------
   resetEditor() {
     document.getElementById('tmplName').value = '';
@@ -129,17 +180,22 @@ const TM = {
     const container = document.getElementById('sectionsContainer');
     if (!container) return;
     container.innerHTML = sections.map((sec, si) =>
-      this._sectionHTML(si, sec.label || '', sec.items || [''])
+      // sec.owner: 'admin' | 'user' (default เป็น admin เพื่อรองรับ template เก่า)
+      this._sectionHTML(si, sec.label || '', sec.items || [''], sec.owner || 'admin')
     ).join('');
   },
 
-  _sectionHTML(si, label, items) {
+  _sectionHTML(si, label, items, owner = 'admin') {
     const itemsHtml = items.map((item, ii) => this._itemRowHTML(si, ii, item)).join('');
     return `
       <div class="tmpl-section-card" id="sec-${si}">
         <div class="tmpl-section-head">
           <span style="font-size:12px;color:var(--text3);font-family:var(--mono);flex-shrink:0">#${parseInt(si) + 1}</span>
           <input type="text" id="sec-label-${si}" placeholder="ชื่อ Section เช่น 🖥️ Hardware" value="${this._esc(label)}">
+          <select id="sec-owner-${si}" title="กำหนดผู้รับผิดชอบ section นี้" style="max-width:120px">
+            <option value="admin"${owner === 'admin' ? ' selected' : ''}>Admin</option>
+            <option value="user"${owner === 'user' ? ' selected' : ''}>User</option>
+          </select>
           <button class="btn btn-ghost btn-sm" onclick="TM._removeSection(${si})" title="ลบ Section" style="color:var(--danger);flex-shrink:0">✕ ลบ Section</button>
         </div>
         <div class="tmpl-section-body">
@@ -178,7 +234,7 @@ const TM = {
     const container = document.getElementById('sectionsContainer');
     if (!container) return;
     const div = document.createElement('div');
-    div.innerHTML = this._sectionHTML(si, '', ['']);
+    div.innerHTML = this._sectionHTML(si, '', [''], 'admin');
     container.appendChild(div.firstElementChild);
     setTimeout(() => document.getElementById(`sec-label-${si}`)?.focus(), 50);
   },
@@ -260,6 +316,8 @@ const TM = {
     document.querySelectorAll('#sectionsContainer .tmpl-section-card').forEach(secEl => {
       const si = secEl.id.replace('sec-', '');
       const label = document.getElementById(`sec-label-${si}`)?.value.trim() || '';
+      // owner ระบุว่า section นี้เป็นงานของฝั่งไหน (admin/user)
+      const owner = document.getElementById(`sec-owner-${si}`)?.value === 'user' ? 'user' : 'admin';
       const items = [];
       secEl.querySelectorAll('.item-wrap').forEach(itemEl => {
         const labelVal = itemEl.querySelector('.item-row input[type=text]')?.value.trim();
@@ -280,6 +338,7 @@ const TM = {
         sections.push({
           category: `section_${si}`,
           label:    label || `Section ${parseInt(si) + 1}`,
+          owner,
           items,
         });
       }
