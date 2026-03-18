@@ -23,6 +23,43 @@ const DEFAULT_USER_TEST_ITEMS = [
   'อื่นๆ',
 ];
 
+// ค่าเริ่มต้นของ "ส่วนหัวฟอร์ม" ที่จะใช้เป็น fallback เสมอ
+// โครงสร้างนี้จะถูกบันทึกลง DB ใน field: header_fields (JSON)
+const DEFAULT_HEADER_FIELDS = {
+  // ชื่อการ์ดข้อมูลพนักงานในหน้า create-form
+  employeeCardTitle: '👤 ข้อมูลพนักงานผู้รับ',
+  // ชื่อการ์ดข้อมูลครุภัณฑ์ในหน้า create-form
+  assetCardTitle: '💻 ข้อมูลครุภัณฑ์',
+  // labels: map id input -> ข้อความ label
+  labels: {
+    'c-name': 'ชื่อ-นามสกุล',
+    'c-code': 'รหัสพนักงาน',
+    'c-dept': 'แผนก',
+    'c-email': 'Email (สำหรับส่ง Link)',
+    'c-asset': 'รหัสครุภัณฑ์',
+    'c-model': 'ยี่ห้อ / รุ่น',
+    'c-serial': 'Serial Number',
+    'c-spec': 'Spec โดยย่อ',
+    'c-date': 'วันที่ส่งมอบ',
+    'c-loc': 'สถานที่ส่งมอบ',
+    'c-type': 'ประเภท',
+  },
+  // placeholders: map id input -> placeholder ในช่องกรอก
+  placeholders: {
+    'c-name': 'พิมพ์ชื่อหรือเลือกจากรายการ',
+    'c-code': 'เช่น 1001',
+    'c-dept': 'เช่น ฝ่ายบัญชี',
+    'c-email': 'somchai@company.com',
+    'c-asset': 'IT-PC-0001',
+    'c-model': 'Dell OptiPlex 5090',
+    'c-serial': 'SN123456',
+    'c-spec': 'Intel i5-11500, RAM 16GB, SSD 512GB',
+    'c-date': '',
+    'c-loc': 'อาคาร A ชั้น 3',
+    'c-type': '',
+  },
+};
+
 const TM = {
   _API:    '/api/form-templates',
   _secIdx: 0,  // counter unique key ของ section DOM
@@ -41,6 +78,7 @@ const TM = {
     // render editor ด้วย built-in เป็น default
     this._renderSections(CHECKLIST_TEMPLATE);
     this._renderUserTestItems(DEFAULT_USER_TEST_ITEMS);
+    this._renderHeaderFields(DEFAULT_HEADER_FIELDS);
   },
 
   // -------------------- Load template list into dropdown --------------------
@@ -68,6 +106,7 @@ const TM = {
       document.getElementById('tmplIsDefault').checked = false;
       this._renderSections(CHECKLIST_TEMPLATE);
       this._renderUserTestItems(DEFAULT_USER_TEST_ITEMS);
+      this._renderHeaderFields(DEFAULT_HEADER_FIELDS);
       return;
     }
     try {
@@ -79,6 +118,7 @@ const TM = {
       document.getElementById('tmplIsDefault').checked = false;
       this._renderSections(t.sections && t.sections.length ? t.sections : CHECKLIST_TEMPLATE);
       this._renderUserTestItems(t.userTestItems && t.userTestItems.length ? t.userTestItems : DEFAULT_USER_TEST_ITEMS);
+      this._renderHeaderFields(t.headerFields || DEFAULT_HEADER_FIELDS);
     } catch (e) {
       alert('เกิดข้อผิดพลาด: ' + e.message);
     }
@@ -141,6 +181,148 @@ const TM = {
     document.getElementById('srcTemplate').value = '';
     this._renderSections(CHECKLIST_TEMPLATE);
     this._renderUserTestItems(DEFAULT_USER_TEST_ITEMS);
+    this._renderHeaderFields(DEFAULT_HEADER_FIELDS);
+  },
+
+  // normalize ค่า headerFields ที่ได้จาก API ให้ครบทุก key
+  // กรณี template เก่าไม่มี headerFields จะเติมด้วยค่า default ทั้งหมด
+  _normHeaderFields(raw) {
+    // ผสาน label จาก default + ค่าจริงที่ส่งมา
+    const labels = { ...DEFAULT_HEADER_FIELDS.labels, ...(raw?.labels || {}) };
+    // ผสาน placeholder จาก default + ค่าจริงที่ส่งมา
+    const placeholders = { ...DEFAULT_HEADER_FIELDS.placeholders, ...(raw?.placeholders || {}) };
+    return {
+      // trim เพื่อตัดช่องว่างหัวท้าย
+      employeeCardTitle: String(raw?.employeeCardTitle || DEFAULT_HEADER_FIELDS.employeeCardTitle).trim(),
+      // trim เพื่อตัดช่องว่างหัวท้าย
+      assetCardTitle: String(raw?.assetCardTitle || DEFAULT_HEADER_FIELDS.assetCardTitle).trim(),
+      // คืน labels ที่เติมครบแล้ว
+      labels,
+      // คืน placeholders ที่เติมครบแล้ว
+      placeholders,
+    };
+  },
+
+  // render ค่า headerFields ลง input ของหน้า admin template editor
+  _renderHeaderFields(raw) {
+    // normalize ก่อนทุกครั้งเพื่อให้แน่ใจว่า field ไม่หาย
+    const cfg = this._normHeaderFields(raw);
+    // map id ของ field จริง -> id input สำหรับแก้ label
+    const mapLabel = {
+      'c-name': 'hf-label-c-name',
+      'c-code': 'hf-label-c-code',
+      'c-dept': 'hf-label-c-dept',
+      'c-email': 'hf-label-c-email',
+      'c-asset': 'hf-label-c-asset',
+      'c-model': 'hf-label-c-model',
+      'c-serial': 'hf-label-c-serial',
+      'c-spec': 'hf-label-c-spec',
+      'c-date': 'hf-label-c-date',
+      'c-loc': 'hf-label-c-loc',
+      'c-type': 'hf-label-c-type',
+    };
+    // map id ของ field จริง -> id input สำหรับแก้ placeholder
+    const mapPlaceholder = {
+      'c-name': 'hf-ph-c-name',
+      'c-code': 'hf-ph-c-code',
+      'c-dept': 'hf-ph-c-dept',
+      'c-email': 'hf-ph-c-email',
+      'c-asset': 'hf-ph-c-asset',
+      'c-model': 'hf-ph-c-model',
+      'c-serial': 'hf-ph-c-serial',
+      'c-spec': 'hf-ph-c-spec',
+      'c-date': 'hf-ph-c-date',
+      'c-loc': 'hf-ph-c-loc',
+      'c-type': 'hf-ph-c-type',
+    };
+
+    // input สำหรับหัวข้อการ์ดพนักงาน
+    const employeeTitle = document.getElementById('hf-employee-title');
+    // input สำหรับหัวข้อการ์ดครุภัณฑ์
+    const assetTitle = document.getElementById('hf-asset-title');
+    // เติมค่า title ลง input
+    if (employeeTitle) employeeTitle.value = cfg.employeeCardTitle;
+    // เติมค่า title ลง input
+    if (assetTitle) assetTitle.value = cfg.assetCardTitle;
+
+    // วนเติมค่า label ตาม map
+    Object.keys(mapLabel).forEach((field) => {
+      const el = document.getElementById(mapLabel[field]);
+      // ถ้ามี element ให้ใส่ค่า, ถ้าไม่มีให้ข้ามอย่างปลอดภัย
+      if (el) el.value = cfg.labels[field] || '';
+    });
+    // วนเติมค่า placeholder ตาม map
+    Object.keys(mapPlaceholder).forEach((field) => {
+      const el = document.getElementById(mapPlaceholder[field]);
+      // ถ้ามี element ให้ใส่ค่า, ถ้าไม่มีให้ข้ามอย่างปลอดภัย
+      if (el) el.value = cfg.placeholders[field] || '';
+    });
+  },
+
+  // เก็บค่าจาก input editor ทั้งหมด กลับเป็น object headerFields เพื่อส่ง API
+  _collectHeaderFields() {
+    // map สำหรับดึงค่า label จาก input id
+    const mapLabel = {
+      'c-name': 'hf-label-c-name',
+      'c-code': 'hf-label-c-code',
+      'c-dept': 'hf-label-c-dept',
+      'c-email': 'hf-label-c-email',
+      'c-asset': 'hf-label-c-asset',
+      'c-model': 'hf-label-c-model',
+      'c-serial': 'hf-label-c-serial',
+      'c-spec': 'hf-label-c-spec',
+      'c-date': 'hf-label-c-date',
+      'c-loc': 'hf-label-c-loc',
+      'c-type': 'hf-label-c-type',
+    };
+    // map สำหรับดึงค่า placeholder จาก input id
+    const mapPlaceholder = {
+      'c-name': 'hf-ph-c-name',
+      'c-code': 'hf-ph-c-code',
+      'c-dept': 'hf-ph-c-dept',
+      'c-email': 'hf-ph-c-email',
+      'c-asset': 'hf-ph-c-asset',
+      'c-model': 'hf-ph-c-model',
+      'c-serial': 'hf-ph-c-serial',
+      'c-spec': 'hf-ph-c-spec',
+      'c-date': 'hf-ph-c-date',
+      'c-loc': 'hf-ph-c-loc',
+      'c-type': 'hf-ph-c-type',
+    };
+
+    // object ปลายทางสำหรับ labels
+    const labels = {};
+    // object ปลายทางสำหรับ placeholders
+    const placeholders = {};
+
+    // วนอ่านค่าจาก UI ฝั่ง label
+    Object.keys(mapLabel).forEach((field) => {
+      const el = document.getElementById(mapLabel[field]);
+      // fallback กันกรณีปล่อยว่าง
+      const fallback = DEFAULT_HEADER_FIELDS.labels[field] || '';
+      // trim เพื่อลดข้อมูลสกปรก
+      labels[field] = String(el?.value || fallback).trim();
+    });
+    // วนอ่านค่าจาก UI ฝั่ง placeholder
+    Object.keys(mapPlaceholder).forEach((field) => {
+      const el = document.getElementById(mapPlaceholder[field]);
+      // fallback กันกรณีปล่อยว่าง
+      const fallback = DEFAULT_HEADER_FIELDS.placeholders[field] || '';
+      // trim เพื่อลดข้อมูลสกปรก
+      placeholders[field] = String(el?.value || fallback).trim();
+    });
+
+    // คืนโครงสร้างเดียวกับที่ create-form ใช้
+    return {
+      // ชื่อการ์ดพนักงาน
+      employeeCardTitle: String(document.getElementById('hf-employee-title')?.value || DEFAULT_HEADER_FIELDS.employeeCardTitle).trim(),
+      // ชื่อการ์ดครุภัณฑ์
+      assetCardTitle: String(document.getElementById('hf-asset-title')?.value || DEFAULT_HEADER_FIELDS.assetCardTitle).trim(),
+      // labels ที่รวบรวมแล้ว
+      labels,
+      // placeholders ที่รวบรวมแล้ว
+      placeholders,
+    };
   },
 
   // -------------------- User Test Items --------------------
@@ -360,6 +542,8 @@ const TM = {
       name,
       sections,
       userTestItems,
+      // แนบ config ส่วนหัวฟอร์มไปพร้อม template
+      headerFields: this._collectHeaderFields(),
       isDefault: document.getElementById('tmplIsDefault')?.checked || false,
     };
   },

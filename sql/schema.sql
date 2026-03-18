@@ -83,3 +83,16 @@ CREATE TABLE IF NOT EXISTS forms (
   KEY idx_emp_code (emp_code),
   KEY idx_asset_code (asset_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ตาราง form_templates — เก็บ template checklist และการตั้งค่าส่วนหัวฟอร์ม
+CREATE TABLE IF NOT EXISTS form_templates (
+  id              INT           NOT NULL AUTO_INCREMENT,
+  name            VARCHAR(200)  NOT NULL,
+  sections        JSON          NOT NULL,
+  user_test_items JSON          DEFAULT NULL,
+  header_fields   JSON          DEFAULT NULL,
+  is_default      TINYINT(1)    NOT NULL DEFAULT 0,
+  created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME      DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

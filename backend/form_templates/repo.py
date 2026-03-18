@@ -19,6 +19,8 @@ def tmpl_to_dict(t) -> dict:
         "name":          t.name,
         "sections":      t.sections or [],
         "userTestItems": t.user_test_items or [],
+        # ส่ง config ส่วนหัวฟอร์มให้ frontend นำไป apply ในหน้า create-form
+        "headerFields":  t.header_fields or {},
         "isDefault":     bool(t.is_default),
         "createdAt":     t.created_at.isoformat() if t.created_at else None,
         "updatedAt":     t.updated_at.isoformat() if t.updated_at else None,
@@ -57,6 +59,8 @@ class TemplateRepository:
             name=data.get("name", "Template ใหม่"),
             sections=data.get("sections", []),
             user_test_items=data.get("userTestItems", []),
+            # รับ headerFields จาก request แล้วเก็บลงคอลัมน์ header_fields
+            header_fields=data.get("headerFields", {}),
             is_default=bool(data.get("isDefault", False)),
         )
         db.add(tmpl)
@@ -81,6 +85,8 @@ class TemplateRepository:
         tmpl.name            = data.get("name", tmpl.name)
         tmpl.sections        = data.get("sections", tmpl.sections)
         tmpl.user_test_items = data.get("userTestItems", tmpl.user_test_items)
+        # อัปเดตการตั้งค่าส่วนหัวฟอร์มถ้ามีส่งมา
+        tmpl.header_fields   = data.get("headerFields", tmpl.header_fields)
         tmpl.is_default      = bool(data.get("isDefault", False))
         db.commit()
         db.refresh(tmpl)

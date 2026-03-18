@@ -96,8 +96,15 @@ function buildFormView(f) {
     <!-- Checklist — รองรับทั้ง template มาตรฐานและ custom -->
     ${(() => {
       if (!checklist.length) return '';
+      const hasInputText = (v) => typeof v === 'string' && v.trim() !== '';
       const catMap = new Map();
       checklist.forEach(c => {
+        // แสดงรายการที่มีการกรอก input หรือมีการติ๊ก checkbox แล้ว
+        const hasNoteInput = hasInputText(c.adminNote) || hasInputText(c.userNote);
+        const hasChecked = c.adminChecked === true;
+        if (!hasNoteInput && !hasChecked) return;
+        
+
         const cat = c.category || '';
         if (!catMap.has(cat)) {
           const tmplSec = CHECKLIST_TEMPLATE.find(s => s.category === cat);
@@ -105,30 +112,19 @@ function buildFormView(f) {
         }
         catMap.get(cat).items.push(c);
       });
+      if (!catMap.size) return '';
       return [...catMap.values()].map(sec => `
         <div class="checklist-view-section">
           <div class="checklist-view-title">${sec.label}</div>
           <div class="checklist-view-header">
             <span></span><span>รายการ</span>
-            <span class="center">Admin</span>
-            <span class="center">User</span>
-          </div>
+            </div>
           ${sec.items.map(c => `
             <div class="checklist-view-row">
               <span class="check-icon">${c.adminChecked ? '✅' : '⬜'}</span>
               <span class="item-name">
-                ${c.group ? `<span style="font-size:11px;color:var(--text3)">${c.group} › </span>` : ''}${c.item}
-                ${c.adminNote ? `<small class="admin-note">📌 ${c.adminNote}</small>` : ''}
-              </span>
-              <span class="center">${c.adminChecked ? '<span class="tag-ok">ผ่าน</span>' : '<span class="tag-empty">—</span>'}</span>
-              <span class="center">
-                ${c.adminChecked
-                  ? (c.userStatus === 'ok'
-                      ? `<span class="tag-ok">✓ ปกติ</span>`
-                      : c.userStatus === 'issue'
-                        ? `<span class="tag-issue">⚠ ปัญหา</span>${c.userNote ? `<small class="user-note">${c.userNote}</small>` : ''}`
-                        : `<span class="tag-empty">ยังไม่กรอก</span>`)
-                  : '<span class="tag-empty">—</span>'}
+                <span class="item-main">${c.group ? `<span style="font-size:11px;color:var(--text3)">${c.group} › </span>` : ''}${c.item}</span>
+                ${c.adminNote ? `<small class="admin-note item-side-note">📌 ${c.adminNote}</small>` : ''}
               </span>
             </div>
           `).join('')}
@@ -137,23 +133,40 @@ function buildFormView(f) {
     })()}
 
     <!-- User Test Items -->
-    ${(f.userTestItems && f.userTestItems.length) || f.userReceiveDate ? `
-      <div class="user-test-box">
-        <div class="user-test-title">📋 ผู้รับมอบทดสอบการใช้งาน</div>
-        ${f.userTestItems && f.userTestItems.length ? `
-          <div class="user-test-list">
-            ${f.userTestItems.map(t => `
-              <div class="user-test-item">☑ ${t}</div>
-            `).join('')}
-          </div>
-        ` : '<div style="font-size:13px;color:var(--text3)">ไม่ได้ระบุรายการทดสอบ</div>'}
-        ${f.userReceiveDate ? `
-          <div style="margin-top:8px;font-size:13px;color:var(--text2)">
-            📅 วันที่รับมอบ: <b>${Utils.fmtDate(f.userReceiveDate)}</b>
-          </div>
-        ` : ''}
-      </div>
-    ` : ''}
+    ${(() => {
+      // กลุ่มนี้ใช้ตัดสินว่า "User ตอบกลับแล้วหรือยัง"
+      const hasTests = Array.isArray(f.userTestItems) && f.userTestItems.length > 0;
+      const hasReceiveDate = !!f.userReceiveDate;
+      const hasChecklistResponse = checklist.some(c => !!c.userStatus);
+      // ใช้สถานะฟอร์มเป็นตัวตัดสินหลัก: sent = รอผู้รับมอบกรอก
+      // เพราะบาง record มีค่าเริ่มต้น userTestItems ตั้งแต่ตอนสร้างฟอร์ม
+      const isWaitingUser = f.status === STATUS.SENT;
+      // ถ้าไม่อยู่สถานะรอแล้ว ค่อยพิจารณาว่ามีความคืบหน้าจริงจากฝั่ง user หรือไม่
+      const hasUserProgress = !isWaitingUser && (hasReceiveDate || !!f.userFilledAt || !!f.userSig || hasChecklistResponse || !!(f.userIssues && String(f.userIssues).trim()) || hasTests);
+      const assigneeLabel = `${f.empName || 'ไม่ระบุชื่อ'} (${f.empCode || 'ไม่ระบุรหัส'})`;
+
+      return `
+        <div class="user-test-box">
+          <div class="user-test-title">📋 ผู้รับมอบทดสอบการใช้งาน</div>
+          ${isWaitingUser
+            // ยังไม่ตอบกลับ: แสดงชื่อ/รหัสคนที่เราส่งให้เป็นผู้รับมอบ
+            ? `<div style="font-size:13px;color:var(--warning);font-weight:600">⏳ รอ: ${assigneeLabel}</div>`
+            : ''}
+          ${(!isWaitingUser && hasTests) ? `
+            <div class="user-test-list">
+              ${f.userTestItems.map(t => `
+                <div class="user-test-item">☑ ${t}</div>
+              `).join('')}
+            </div>
+          ` : ((!isWaitingUser && hasUserProgress) ? '<div style="font-size:13px;color:var(--text3)">ไม่ได้ระบุรายการทดสอบ</div>' : '')}
+          ${(!isWaitingUser && hasReceiveDate) ? `
+            <div style="margin-top:8px;font-size:13px;color:var(--text2)">
+              📅 วันที่รับมอบ: <b>${Utils.fmtDate(f.userReceiveDate)}</b>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    })()}
 
     <!-- Issues Summary -->
     ${issues.length ? `

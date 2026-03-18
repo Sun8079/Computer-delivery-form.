@@ -396,7 +396,7 @@ tr:hover td        { background: #f7f9fc; }
 .checklist-view-header,
 .checklist-view-row {
   display:     grid;
-  grid-template-columns: 22px 1fr 80px 80px;
+  grid-template-columns: 22px 1fr;
   gap:         10px;
   align-items: start;
   padding:     6px 0;
@@ -405,7 +405,15 @@ tr:hover td        { background: #f7f9fc; }
 }
 .checklist-view-header { font-size: 10.5px; color: var(--text3); font-weight: 700; text-transform: uppercase; }
 .check-icon   { font-size: 15px; }
-.item-name    { line-height: 1.4; }
+.item-name    { display: grid; grid-template-columns: minmax(0, 1fr) 170px; align-items: start; gap: 10px; line-height: 1.4; }
+.item-main    { min-width: 0; }
+.item-side-note {
+  width: 170px;
+  text-align: left;
+  margin-top: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .admin-note   { display: block; font-size: 11.5px; color: var(--text3); margin-top: 2px; }
 .user-note    { display: block; font-size: 11.5px; color: var(--text2); }
 .center       { text-align: center; }
@@ -491,7 +499,9 @@ tr:hover td        { background: #f7f9fc; }
 
   /* Checklist view → compress columns */
   .checklist-view-header,
-  .checklist-view-row { grid-template-columns: 22px 1fr 60px 60px; }
+  .checklist-view-row { grid-template-columns: 22px 1fr; }
+  .item-name { grid-template-columns: minmax(0, 1fr) 130px; gap: 8px; }
+  .item-side-note { width: 130px; }
 }
 
 @media (max-width: 480px) {

@@ -21,6 +21,7 @@ DDL = [
         name            VARCHAR(200)  NOT NULL,
         sections        JSON          NOT NULL,
         user_test_items JSON          DEFAULT NULL,
+        header_fields   JSON          DEFAULT NULL,
         is_default      TINYINT(1)    NOT NULL DEFAULT 0,
         created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at      DATETIME      DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
@@ -39,6 +40,11 @@ COLUMN_MIGRATIONS = [
     (
         "is_default",
         "ALTER TABLE form_templates ADD COLUMN is_default TINYINT(1) NOT NULL DEFAULT 0 AFTER user_test_items",
+    ),
+    (
+        "header_fields",
+        # เพิ่มคอลัมน์เก็บ config ส่วนหัวฟอร์มสำหรับฐานข้อมูลเก่า
+        "ALTER TABLE form_templates ADD COLUMN header_fields JSON DEFAULT NULL AFTER user_test_items",
     ),
     (
         "created_at",

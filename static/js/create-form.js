@@ -36,6 +36,8 @@ const AdminCreate = {
   _nameSuggestCache: [],
   _currentTemplate: null,
   _currentUserTestItems: null,
+  // เก็บ config ส่วนหัวฟอร์มที่มากับ template ปัจจุบัน
+  _currentHeaderFields: null,
   _templateLoading: false,
 
   _setTemplateStatus(text, color = 'var(--text3)') {
@@ -50,6 +52,90 @@ const AdminCreate = {
     const reloadBtn = document.getElementById('c-template-reload-btn');
     if (sel) sel.disabled = !!locked;
     if (reloadBtn) reloadBtn.disabled = !!locked;
+  },
+
+  // ค่า fallback ฝั่ง create-form เมื่อยังไม่ได้เลือก template
+  // หรือกรณี template ไม่มี headerFields / โหลด template ไม่สำเร็จ
+  _defaultHeaderFields() {
+    return {
+      // หัวข้อการ์ดพนักงาน
+      employeeCardTitle: '👤 ข้อมูลพนักงานผู้รับ',
+      // หัวข้อการ์ดครุภัณฑ์
+      assetCardTitle: '💻 ข้อมูลครุภัณฑ์',
+      // labels ของ input แต่ละตัว
+      labels: {
+        'c-name': 'ชื่อ-นามสกุล',
+        'c-code': 'รหัสพนักงาน',
+        'c-dept': 'แผนก',
+        'c-email': 'Email (สำหรับส่ง Link)',
+        'c-asset': 'รหัสครุภัณฑ์',
+        'c-model': 'ยี่ห้อ / รุ่น',
+        'c-serial': 'Serial Number',
+        'c-spec': 'Spec โดยย่อ',
+        'c-date': 'วันที่ส่งมอบ',
+        'c-loc': 'สถานที่ส่งมอบ',
+        'c-type': 'ประเภท',
+      },
+      // placeholders ของ input แต่ละตัว
+      placeholders: {
+        'c-name': 'พิมพ์ชื่อหรือเลือกจากรายการ',
+        'c-code': 'เช่น 1001',
+        'c-dept': 'เช่น ฝ่ายบัญชี',
+        'c-email': 'somchai@company.com',
+        'c-asset': 'IT-PC-0001',
+        'c-model': 'Dell OptiPlex 5090',
+        'c-serial': 'SN123456',
+        'c-spec': 'Intel i5-11500, RAM 16GB, SSD 512GB',
+        'c-date': '',
+        'c-loc': 'อาคาร A ชั้น 3',
+        'c-type': '',
+      },
+    };
+  },
+
+  // ทำให้ headerFields ที่ได้จาก API เป็นโครงสร้างที่ครบเสมอ
+  _normalizeHeaderFields(raw) {
+    // ใช้ default เป็นฐาน
+    const base = this._defaultHeaderFields();
+    return {
+      // ถ้า API ไม่ส่ง title มา ให้ fallback เป็น default
+      employeeCardTitle: String(raw?.employeeCardTitle || base.employeeCardTitle).trim(),
+      // ถ้า API ไม่ส่ง title มา ให้ fallback เป็น default
+      assetCardTitle: String(raw?.assetCardTitle || base.assetCardTitle).trim(),
+      // ผสาน labels จาก default กับค่าที่มากับ template
+      labels: { ...base.labels, ...(raw?.labels || {}) },
+      // ผสาน placeholders จาก default กับค่าที่มากับ template
+      placeholders: { ...base.placeholders, ...(raw?.placeholders || {}) },
+    };
+  },
+
+  // apply ค่า headerFields ลง DOM จริงของหน้า create-form
+  _applyHeaderFields(raw) {
+    // normalize ทุกครั้งก่อน apply
+    const cfg = this._normalizeHeaderFields(raw);
+    // span title ของการ์ดพนักงาน
+    const employeeCardTitle = document.getElementById('c-employee-card-title');
+    // span title ของการ์ดครุภัณฑ์
+    const assetCardTitle = document.getElementById('c-asset-card-title');
+    // แทนข้อความ title
+    if (employeeCardTitle) employeeCardTitle.textContent = cfg.employeeCardTitle;
+    // แทนข้อความ title
+    if (assetCardTitle) assetCardTitle.textContent = cfg.assetCardTitle;
+
+    // วนแทนข้อความ label ตาม key fieldId
+    Object.entries(cfg.labels || {}).forEach(([fieldId, text]) => {
+      const labelSpan = document.getElementById(`lbl-${fieldId}`);
+      // ใส่ข้อความ label ที่ normalize แล้ว
+      if (labelSpan) labelSpan.textContent = String(text || '').trim();
+    });
+    // วนแทน placeholder ตาม key fieldId
+    Object.entries(cfg.placeholders || {}).forEach(([fieldId, text]) => {
+      const input = document.getElementById(fieldId);
+      // เปลี่ยนเฉพาะ input text/email ฯลฯ (ยกเว้น date)
+      if (input && input.tagName === 'INPUT' && input.type !== 'date') {
+        input.placeholder = String(text || '').trim();
+      }
+    });
   },
 
   _buildTemplateFromChecklist(checklist) {
@@ -399,8 +485,11 @@ const AdminCreate = {
     if (!id) {
       this._currentTemplate = null;
       this._currentUserTestItems = null;
+      this._currentHeaderFields = null;
       this._templateLoading = false;
       this.renderChecklist();
+      // เมื่อเลือก Default ให้ใช้หัวข้อ/label/placeholder มาตรฐาน
+      this._applyHeaderFields(this._defaultHeaderFields());
       this._setTemplateStatus('ใช้แบบฟอร์มมาตรฐาน (Default)', 'var(--text3)');
       return;
     }
@@ -413,8 +502,11 @@ const AdminCreate = {
       if (!r.ok) {
         this._currentTemplate = null;
         this._currentUserTestItems = null;
+        this._currentHeaderFields = null;
         this._templateLoading = false;
         this.renderChecklist();
+        // template โหลดไม่ได้ -> fallback UI เป็นค่า default
+        this._applyHeaderFields(this._defaultHeaderFields());
         this._setTemplateStatus('โหลด Template ไม่สำเร็จ (Fallback เป็น Default)', 'var(--danger)');
         alert('โหลด Template ที่เลือกไม่สำเร็จ ระบบจะใช้แบบฟอร์มมาตรฐานแทน');
         return;
@@ -422,14 +514,21 @@ const AdminCreate = {
       const tmpl = await r.json();
       this._currentTemplate = tmpl.sections?.length ? tmpl.sections : null;
       this._currentUserTestItems = tmpl.userTestItems?.length ? tmpl.userTestItems : null;
+      // เก็บ config ส่วนหัวจาก template ที่โหลดได้
+      this._currentHeaderFields = this._normalizeHeaderFields(tmpl.headerFields || null);
       this._templateLoading = false;
       this.renderChecklist();
+      // apply ส่วนหัวฟอร์มตาม template ปัจจุบัน
+      this._applyHeaderFields(this._currentHeaderFields);
       this._setTemplateStatus(`โหลดสำเร็จ: ${tmpl.name || 'Template ที่เลือก'}`, 'var(--success)');
     } catch (_) {
       this._currentTemplate = null;
       this._currentUserTestItems = null;
+      this._currentHeaderFields = null;
       this._templateLoading = false;
       this.renderChecklist();
+      // network error -> fallback UI เป็นค่า default
+      this._applyHeaderFields(this._defaultHeaderFields());
       this._setTemplateStatus('เชื่อมต่อไม่ได้ (Fallback เป็น Default)', 'var(--danger)');
       alert('ไม่สามารถเชื่อมต่อเพื่อโหลด Template ได้ ระบบจะใช้แบบฟอร์มมาตรฐานแทน');
     }
@@ -458,6 +557,9 @@ const AdminCreate = {
     this._loadedForm = null;
     this._currentTemplate = null;
     this._currentUserTestItems = null;
+    this._currentHeaderFields = null;
+    // reset หน้า create ให้กลับเป็นค่า default ก่อนโหลด template ใหม่
+    this._applyHeaderFields(this._defaultHeaderFields());
     const editBox = document.getElementById('editModeBox');
     if (editBox) editBox.style.display = 'none';
     this._setEditNoteVisibility(false);

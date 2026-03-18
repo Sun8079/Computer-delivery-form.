@@ -19,6 +19,9 @@ class FormTemplate(Base):
     name            = Column(String(200), nullable=False)
     sections        = Column(JSON, nullable=False, default=list)
     user_test_items = Column(JSON, nullable=True, default=list)
+    # เก็บการตั้งค่าส่วนหัวหน้า create-form (title/label/placeholder)
+    # โครงสร้าง camelCase ฝั่ง API: headerFields
+    header_fields   = Column(JSON, nullable=True, default=dict)
     is_default      = Column(Boolean, nullable=False, default=False)
     created_at      = Column(DateTime(timezone=True), server_default=func.now())
     updated_at      = Column(DateTime(timezone=True), onupdate=func.now())

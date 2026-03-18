@@ -33,11 +33,11 @@
   </div>
 
   <div class="card" style="margin-bottom:14px">
-    <div class="card-header"><span class="card-title">👤 ข้อมูลพนักงานผู้รับ</span></div>
+    <div class="card-header"><span class="card-title" id="c-employee-card-title">👤 ข้อมูลพนักงานผู้รับ</span></div>
     <div class="card-body">
       <div class="form-grid">
         <div class="form-group">
-          <label>ชื่อ-นามสกุล <span class="req">*</span></label>
+          <label><span id="lbl-c-name">ชื่อ-นามสกุล</span> <span class="req">*</span></label>
           <div class="emp-name-autocomplete">
             <input type="text" id="c-name" list="employeeNameList" placeholder="พิมพ์ชื่อหรือเลือกจากรายการ">
             <div id="c-name-suggest" class="emp-suggest" style="display:none"></div>
@@ -45,12 +45,12 @@
           <small id="c-name-hint" style="display:none;color:#dc2626;font-size:12px;margin-top:3px"></small>
         </div>
         <div class="form-group">
-          <label>รหัสพนักงาน <span class="req">*</span></label>
+          <label><span id="lbl-c-code">รหัสพนักงาน</span> <span class="req">*</span></label>
           <input type="text" id="c-code" list="employeeCodeList" placeholder="เช่น 1001">
           <small id="c-code-hint" style="display:none;color:#dc2626;font-size:12px;margin-top:3px"></small>
         </div>
-        <div class="form-group"><label>แผนก</label><input type="text" id="c-dept" placeholder="เช่น ฝ่ายบัญชี"></div>
-        <div class="form-group"><label>Email (สำหรับส่ง Link)</label><input type="email" id="c-email" placeholder="somchai@company.com"></div>
+        <div class="form-group"><label><span id="lbl-c-dept">แผนก</span></label><input type="text" id="c-dept" placeholder="เช่น ฝ่ายบัญชี"></div>
+        <div class="form-group"><label><span id="lbl-c-email">Email (สำหรับส่ง Link)</span></label><input type="email" id="c-email" placeholder="somchai@company.com"></div>
       </div>
       <datalist id="employeeCodeList"></datalist>
       <datalist id="employeeNameList"></datalist>
@@ -58,16 +58,16 @@
   </div>
 
   <div class="card" style="margin-bottom:14px">
-    <div class="card-header"><span class="card-title">💻 ข้อมูลครุภัณฑ์</span></div>
+    <div class="card-header"><span class="card-title" id="c-asset-card-title">💻 ข้อมูลครุภัณฑ์</span></div>
     <div class="card-body">
       <div class="form-grid-3">
-        <div class="form-group"><label>รหัสครุภัณฑ์ <span class="req">*</span></label><input type="text" id="c-asset" placeholder="IT-PC-0001"></div>
-        <div class="form-group"><label>ยี่ห้อ / รุ่น</label><input type="text" id="c-model" placeholder="Dell OptiPlex 5090"></div>
-        <div class="form-group"><label>Serial Number</label><input type="text" id="c-serial" placeholder="SN123456"></div>
-        <div class="form-group span3"><label>Spec โดยย่อ</label><input type="text" id="c-spec" placeholder="Intel i5-11500, RAM 16GB, SSD 512GB"></div>
-        <div class="form-group"><label>วันที่ส่งมอบ</label><input type="date" id="c-date"></div>
-        <div class="form-group"><label>สถานที่ส่งมอบ</label><input type="text" id="c-loc" placeholder="อาคาร A ชั้น 3"></div>
-        <div class="form-group"><label>ประเภท</label>
+        <div class="form-group"><label><span id="lbl-c-asset">รหัสครุภัณฑ์</span> <span class="req">*</span></label><input type="text" id="c-asset" placeholder="IT-PC-0001"></div>
+        <div class="form-group"><label><span id="lbl-c-model">ยี่ห้อ / รุ่น</span></label><input type="text" id="c-model" placeholder="Dell OptiPlex 5090"></div>
+        <div class="form-group"><label><span id="lbl-c-serial">Serial Number</span></label><input type="text" id="c-serial" placeholder="SN123456"></div>
+        <div class="form-group span3"><label><span id="lbl-c-spec">Spec โดยย่อ</span></label><input type="text" id="c-spec" placeholder="Intel i5-11500, RAM 16GB, SSD 512GB"></div>
+        <div class="form-group"><label><span id="lbl-c-date">วันที่ส่งมอบ</span></label><input type="date" id="c-date"></div>
+        <div class="form-group"><label><span id="lbl-c-loc">สถานที่ส่งมอบ</span></label><input type="text" id="c-loc" placeholder="อาคาร A ชั้น 3"></div>
+        <div class="form-group"><label><span id="lbl-c-type">ประเภท</span></label>
           <select id="c-type">
             <option value="new">เครื่องใหม่</option>
             <option value="replace">เปลี่ยนทดแทน</option>

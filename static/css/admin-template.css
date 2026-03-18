@@ -90,3 +90,32 @@
   color: var(--primary-lt) !important;
   background: rgba(99,102,241,.1);
 }
+
+/* ===== CREATE HEADER FIELD EDITOR ===== */
+.header-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+
+.header-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.header-field-row.full {
+  grid-column: 1 / -1;
+}
+
+.header-field-row label {
+  font-size: 12px;
+  color: var(--text2);
+  font-weight: 600;
+}
+
+@media (max-width: 860px) {
+  .header-field-grid {
+    grid-template-columns: 1fr;
+  }
+}
